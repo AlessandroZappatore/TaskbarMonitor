@@ -16,7 +16,7 @@ if not exist "%FW%\csc.exe" (
     /r:"%WINMD%\Windows.Foundation.winmd" ^
     /r:"%WINMD%\Windows.Media.winmd" ^
     /r:"%WINMD%\Windows.Storage.winmd" ^
-    src\TaskbarMonitor.cs
+    src\*.cs
 
 if errorlevel 1 (
     echo Build failed.

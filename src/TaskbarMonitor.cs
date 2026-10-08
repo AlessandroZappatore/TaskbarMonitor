@@ -42,7 +42,7 @@ class TaskbarMonitor : Form
     [DllImport("user32.dll")] static extern bool RegisterHotKey(IntPtr h, int id, int mods, int vk);
     [DllImport("user32.dll")] static extern bool UnregisterHotKey(IntPtr h, int id);
     static System.Threading.EventWaitHandle showEvent;
-    static bool StartedByAutostart;
+    static bool StartedByAutostart, OpenSettingsOnStart;
     bool hidden;
     ToolStripMenuItem hideItem;
 
@@ -91,6 +91,7 @@ class TaskbarMonitor : Form
             }
             showEvent = new System.Threading.EventWaitHandle(false, System.Threading.EventResetMode.AutoReset, ShowEvent);
             StartedByAutostart = Array.IndexOf(args, "--autostart") >= 0;
+            OpenSettingsOnStart = Array.IndexOf(args, "--settings") >= 0;
             Migrate();
             if (!SetProcessDpiAwarenessContext(new IntPtr(-4))) SetProcessDPIAware();
             try { S = GetDpiForSystem() / 96f; } catch { S = 1f; }
@@ -105,8 +106,8 @@ class TaskbarMonitor : Form
         ShowInTaskbar = false;
         StartPosition = FormStartPosition.Manual;
         DoubleBuffered = true;
-        Size = new Size(P(224), P(40));
-        InitStats();
+        Size = new Size(ComputeWidth(), P(40));
+        sampler.SetActive(slots);
 
         var menu = new ContextMenuStrip();
         hidden = StartedByAutostart && HiddenSetting();
@@ -122,7 +123,9 @@ class TaskbarMonitor : Form
         reset.Click += (s, e) => PlaceDefault();
         var exit = new ToolStripMenuItem("Exit");
         exit.Click += (s, e) => { tray.Visible = false; Application.Exit(); };
-        menu.Items.AddRange(new ToolStripItem[] { hideItem, new ToolStripSeparator(), autoStartItem, mediaItem, reset, new ToolStripSeparator(), exit });
+        var settingsItem = new ToolStripMenuItem("Settings...");
+        settingsItem.Click += (s, e) => OpenSettings();
+        menu.Items.AddRange(new ToolStripItem[] { hideItem, settingsItem, new ToolStripSeparator(), autoStartItem, mediaItem, reset, new ToolStripSeparator(), exit });
         ContextMenuStrip = menu;
 
         tray.Icon = SystemIcons.Information;
@@ -154,6 +157,12 @@ class TaskbarMonitor : Form
         timer.Interval = 1000;
         timer.Tick += (s, e) => Update1s();
         timer.Start();
+        if (OpenSettingsOnStart)
+        {
+            var once = new Timer { Interval = 800 };
+            once.Tick += (s, e) => { once.Stop(); once.Dispose(); OpenSettings(); };
+            once.Start();
+        }
         Update1s();
     }
 
@@ -234,9 +243,12 @@ class TaskbarMonitor : Form
     {
         using (var k = Registry.CurrentUser.OpenSubKey(SettingsKey))
         {
-            if (k != null && k.GetValue("MX") != null)
+            if (k != null && k.GetValue("MY") != null && (k.GetValue("MR") != null || k.GetValue("MX") != null))
             {
-                var p = new Point((int)k.GetValue("MX"), (int)k.GetValue("MY"));
+                int y = (int)k.GetValue("MY");
+                // si salva il bordo destro: cosi' la larghezza puo' cambiare senza finire sopra l'area di notifica
+                int right = k.GetValue("MR") != null ? (int)k.GetValue("MR") : (int)k.GetValue("MX") + P(224); // MX: versioni <1.2, larghezza di allora
+                var p = new Point(right - Width, y);
                 if (SystemInformation.VirtualScreen.Contains(p)) { SetPos(p.X, p.Y); return; }
             }
         }
@@ -247,8 +259,9 @@ class TaskbarMonitor : Form
     {
         using (var k = Registry.CurrentUser.CreateSubKey(SettingsKey))
         {
-            k.SetValue("MX", pos.X);
+            k.SetValue("MR", pos.X + Width);
             k.SetValue("MY", pos.Y);
+            k.DeleteValue("MX", false);
         }
     }
 
@@ -317,63 +330,97 @@ class TaskbarMonitor : Form
         lastRx = rx; lastTx = tx;
 
         TaskbarHost.Ensure(this, pos);
-        ReadStats();
+        sampler.Down = down; sampler.Up = up;
+        sampler.Update();
         Invalidate();
     }
 
-    // ---- CPU / RAM / temperatura ----
-    [DllImport("kernel32.dll")] static extern bool GetSystemTimes(out long idle, out long kernel, out long user);
-    [StructLayout(LayoutKind.Sequential)]
-    struct MEMSTATUS { public uint len, load; public ulong tp, ap, tpf, apf, tv, av, aev; }
-    [DllImport("kernel32.dll")] static extern bool GlobalMemoryStatusEx(ref MEMSTATUS m);
+    // ---- dati scelti dall'utente ----
+    // Le larghezze delle colonne si misurano sul testo piu' largo possibile di ogni dato scelto:
+    // restano fisse mentre i numeri cambiano, ma non c'e' spazio sprecato.
+    const int SidePad = 4, ColGap = 8, LabelGap = 4;
+    Sampler sampler = new Sampler();
+    Metric[] slots = Metrics.Load();
+    SettingsForm settings;
+    int[] colLabelW = new int[3], colValueW = new int[3], colUnitW = new int[3], colX = new int[3];
+    bool[] colUsed = new bool[3];
+    int totalWidth;
 
-    long pIdle, pKernel, pUser;
-    double cpuPct, ramPct, tempC = double.NaN;
-    PerformanceCounter[] thermal = new PerformanceCounter[0];
-
-    void InitStats()
+    // valore e unita' piu' larghi che ogni dato puo' avere
+    static void WidestSample(Metric m, out string value, out string unit)
     {
-        GetSystemTimes(out pIdle, out pKernel, out pUser);
-        try
+        switch (m)
         {
-            var cat = new PerformanceCounterCategory("Thermal Zone Information");
-            var l = new System.Collections.Generic.List<PerformanceCounter>();
-            foreach (var n in cat.GetInstanceNames()) l.Add(new PerformanceCounter("Thermal Zone Information", "Temperature", n));
-            thermal = l.ToArray();
+            case Metric.Down: case Metric.Up: case Metric.DiskRead: case Metric.DiskWrite:
+                value = "999.9"; unit = "MB/s"; break;
+            case Metric.CpuTemp: value = "100"; unit = "°C"; break;
+            case Metric.RamUsed: value = "128.0"; unit = "GB"; break;
+            case Metric.DiskFree: value = "1023"; unit = "GB"; break;
+            case Metric.Uptime: value = "99d 23"; unit = "h"; break;
+            default: value = "100"; unit = "%"; break;
         }
-        catch { }
     }
 
-    void ReadStats()
+    int TextWidth(string s)
     {
-        long i, k, u;
-        if (GetSystemTimes(out i, out k, out u))
-        {
-            long dIdle = i - pIdle, dTotal = (k - pKernel) + (u - pUser); // kernel include l'idle
-            if (dTotal > 0) cpuPct = Math.Max(0, Math.Min(100, 100.0 * (dTotal - dIdle) / dTotal));
-            pIdle = i; pKernel = k; pUser = u;
-        }
-        var m = new MEMSTATUS { len = (uint)Marshal.SizeOf(typeof(MEMSTATUS)) };
-        if (GlobalMemoryStatusEx(ref m)) ramPct = m.load;
-        double max = double.NaN;
-        foreach (var c in thermal)
-        {
-            try { double v = c.NextValue() - 273.15; if (v > 0 && v < 150 && (double.IsNaN(max) || v > max)) max = v; } catch { }
-        }
-        tempC = max;
+        using (var g = Graphics.FromHwnd(IntPtr.Zero))
+            return (int)Math.Ceiling(g.MeasureString(s, font, 10000, StringFormat.GenericTypographic).Width);
     }
 
-    static void Split(double bps, out string num, out string unit)
+    void ComputeLayout()
     {
-        if (bps >= 1024 * 1024) { num = (bps / 1048576).ToString("0.00"); unit = "MB/s"; }
-        else if (bps >= 1024) { num = (bps / 1024).ToString("0.0"); unit = "KB/s"; }
-        else { num = bps.ToString("0"); unit = "B/s"; }
+        int x = P(SidePad);
+        for (int c = 0; c < 3; c++)
+        {
+            Metric[] pair = { slots[2 * c], slots[2 * c + 1] };
+            colUsed[c] = pair[0] != Metric.None || pair[1] != Metric.None;
+            if (!colUsed[c]) continue;
+            int lw = 0, vw = 0, uw = 0;
+            foreach (var m in pair)
+            {
+                if (m == Metric.None) continue;
+                string v, u;
+                WidestSample(m, out v, out u);
+                lw = Math.Max(lw, TextWidth(sampler.Get(m).Label));
+                vw = Math.Max(vw, TextWidth(v));
+                uw = Math.Max(uw, TextWidth(u));
+            }
+            colLabelW[c] = lw; colValueW[c] = vw; colUnitW[c] = uw;
+            colX[c] = x;
+            x += lw + P(LabelGap) + vw + P(2) + uw + P(ColGap);
+        }
+        bool any = colUsed[0] || colUsed[1] || colUsed[2];
+        totalWidth = any ? x - P(ColGap) + P(SidePad) : P(64);
     }
 
-    static string Fmt(double bps)
+    int ComputeWidth()
     {
-        string n, u; Split(bps, out n, out u);
-        return n + " " + u;
+        ComputeLayout();
+        return totalWidth;
+    }
+
+    // applica la scelta: il bordo destro resta fermo (accanto all'area di notifica) e il widget cresce/si restringe a sinistra
+    void ApplySlots(Metric[] s)
+    {
+        slots = s;
+        Metrics.Save(s);
+        sampler.SetActive(slots);
+        int oldW = Width, newW = ComputeWidth();
+        if (newW != oldW)
+        {
+            Width = newW;
+            SetPos(pos.X + oldW - newW, pos.Y);
+            SavePosition();
+        }
+        Invalidate();
+    }
+
+    void OpenSettings()
+    {
+        if (settings == null || settings.IsDisposed)
+            settings = new SettingsForm(slots, ApplySlots);
+        settings.Show();
+        settings.Activate();
     }
 
     // verde -> giallo -> rosso in base al valore (lo = tutto verde, hi = tutto rosso)
@@ -391,12 +438,33 @@ class TaskbarMonitor : Form
         return Color.FromArgb((int)(a.R + (b.R - a.R) * t), (int)(a.G + (b.G - a.G) * t), (int)(a.B + (b.B - a.B) * t));
     }
 
+
     // disegna un testo in una cella a posizione e larghezza fisse
     void Cell(Graphics g, string text, Color c, int x, int w, int row, StringAlignment al)
     {
         using (var br = new SolidBrush(c))
-        using (var sf = new StringFormat { Alignment = al, LineAlignment = StringAlignment.Center, FormatFlags = StringFormatFlags.NoWrap })
-            g.DrawString(text, font, br, new RectangleF(P(x), row * Height / 2f, P(w), Height / 2f), sf);
+        using (var sf = new StringFormat(StringFormat.GenericTypographic) { Alignment = al, LineAlignment = StringAlignment.Center })
+        {
+            sf.FormatFlags |= StringFormatFlags.NoWrap; // tipografico: niente margine interno, il testo si allinea al pixel
+            g.DrawString(text, font, br, new RectangleF(x, row * Height / 2f, w, Height / 2f), sf);
+        }
+    }
+
+    // una posizione: etichetta | valore | unita'. Etichetta e unita' dipendono dal dato scelto.
+    void DrawSlot(Graphics g, Metric m, int c, int row, bool light, Color fg, Color dim)
+    {
+        if (m == Metric.None) return;
+        Reading r = sampler.Get(m);
+        Color vc = fg;
+        if (r.Good) vc = Heat(0, 0, 1, light);
+        else if (!double.IsNaN(r.Level)) vc = Heat(r.Level, r.Lo, r.Hi, light);
+        bool colored = r.Good || !double.IsNaN(r.Level);
+        int x = colX[c];
+        int vx = x + colLabelW[c] + P(LabelGap);
+        int ux = vx + colValueW[c] + P(r.Unit == "%" || r.Unit == "°C" ? 1 : 3); // % e gradi quasi attaccati al numero
+        Cell(g, r.Label, dim, x, colLabelW[c] + P(LabelGap), row, StringAlignment.Near);
+        Cell(g, r.Value, vc, vx, colValueW[c], row, StringAlignment.Far);
+        Cell(g, r.Unit, colored ? vc : dim, ux, colUnitW[c] + P(4), row, StringAlignment.Near);
     }
 
     protected override void OnPaint(PaintEventArgs e)
@@ -408,25 +476,21 @@ class TaskbarMonitor : Form
         var g = e.Graphics;
         g.Clear(bg);
         g.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
-        var L = StringAlignment.Near; var R = StringAlignment.Far;
 
-        // colonna statistiche: etichetta | valore | temperatura
-        Cell(g, "CPU", dim, 6, 32, 0, L);
-        Cell(g, cpuPct.ToString("0") + "%", Heat(cpuPct, 40, 95, light), 38, 38, 0, R);
-        Cell(g, double.IsNaN(tempC) ? "--" : tempC.ToString("0") + "°C", double.IsNaN(tempC) ? dim : Heat(tempC, 55, 95, light), 80, 40, 0, R);
-        Cell(g, "RAM", dim, 6, 32, 1, L);
-        Cell(g, ramPct.ToString("0") + "%", Heat(ramPct, 50, 95, light), 38, 38, 1, R);
-
-        // colonna velocita': freccia | numero | unita'
-        string dn, du, un, uu;
-        Split(down, out dn, out du); Split(up, out un, out uu);
-        Cell(g, "↓", dim, 128, 14, 0, L); Cell(g, dn, fg, 142, 40, 0, R); Cell(g, du, dim, 186, 34, 0, L);
-        Cell(g, "↑", dim, 128, 14, 1, L); Cell(g, un, fg, 142, 40, 1, R); Cell(g, uu, dim, 186, 34, 1, L);
+        bool any = false;
+        for (int c = 0; c < 3; c++)
+        {
+            if (!colUsed[c]) continue; // colonna vuota: sparisce
+            any = true;
+            DrawSlot(g, slots[2 * c], c, 0, light, fg, dim);
+            DrawSlot(g, slots[2 * c + 1], c, 1, light, fg, dim);
+        }
+        if (!any) Cell(g, "No data", dim, P(SidePad), P(60), 0, StringAlignment.Near);
     }
 
     protected override void Dispose(bool d)
     {
-        if (d) { UnregisterHotKey(Handle, HotkeyId); tray.Dispose(); font.Dispose(); timer.Dispose(); }
+        if (d) { UnregisterHotKey(Handle, HotkeyId); sampler.Dispose(); tray.Dispose(); font.Dispose(); timer.Dispose(); }
         base.Dispose(d);
     }
 }
