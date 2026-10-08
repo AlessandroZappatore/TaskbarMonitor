@@ -58,7 +58,7 @@ If you move the `.exe` to another folder after enabling *Start with Windows*, to
 No SDK or Visual Studio needed: the compiler (`csc.exe`) ships with Windows.
 
 ```bat
-git clone https://github.com/<your-username>/TaskbarMonitor.git
+git clone https://github.com/AlessandroZappatore/TaskbarMonitor.git
 cd TaskbarMonitor
 build.bat
 ```
