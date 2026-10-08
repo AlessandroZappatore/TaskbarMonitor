@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FAQ | Taskbar Monitor</title>
+  <meta name="description" content="Answers about Taskbar Monitor: SmartScreen warnings, privacy, CPU temperature accuracy, hiding the widgets, supported media players, Windows versions and how to uninstall.">
+  <link rel="canonical" href="https://alessandrozappatore.github.io/TaskbarMonitor/faq/">
+  <meta name="theme-color" content="#14181c" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#fafaf8" media="(prefers-color-scheme: light)">
+  <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="Taskbar Monitor">
+  <meta property="og:title" content="Taskbar Monitor FAQ">
+  <meta property="og:description" content="SmartScreen, privacy, temperature accuracy, hiding the widgets, supported players and more.">
+  <meta property="og:url" content="https://alessandrozappatore.github.io/TaskbarMonitor/faq/">
+  <meta property="og:image" content="https://alessandrozappatore.github.io/TaskbarMonitor/og-image.png">
+  <meta name="twitter:card" content="summary_large_image">
+
+  <link rel="stylesheet" href="../style.css">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Taskbar Monitor", "item": "https://alessandrozappatore.github.io/TaskbarMonitor/" },
+          { "@type": "ListItem", "position": 2, "name": "FAQ", "item": "https://alessandrozappatore.github.io/TaskbarMonitor/faq/" }
+        ]
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Why does Windows show a SmartScreen warning?",
+            "acceptedAnswer": { "@type": "Answer", "text": "The executable is not code-signed, because code-signing certificates cost money and this is a free hobby project. Windows warns about any unsigned program that few people have downloaded. Click More info, then Run anyway. The program is a single readable source file that you can build yourself with build.bat, using the compiler included with Windows." }
+          },
+          {
+            "@type": "Question",
+            "name": "Does Taskbar Monitor connect to the internet?",
+            "acceptedAnswer": { "@type": "Answer", "text": "No. It makes no network connections, has no telemetry and no accounts. It only reads local counters and stores its settings in the registry under HKEY_CURRENT_USER\\Software\\TaskbarMonitor." }
+          },
+          {
+            "@type": "Question",
+            "name": "Why is the temperature different from HWiNFO or other tools?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Taskbar Monitor shows the thermal zone temperature that Windows reports through ACPI. It is a system-level value, not a per-core reading. Exact per-core temperatures need a kernel driver and administrator rights, which this app avoids on purpose. If your PC does not expose a thermal zone, the widget shows two dashes." }
+          },
+          {
+            "@type": "Question",
+            "name": "How do I hide the widgets and bring them back?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Right-click a widget and choose Hide widgets. To show them again, click the Taskbar Monitor icon in the notification area, press Ctrl+Alt+M, open TaskbarMonitor.exe again, or right-click the tray icon and choose Show widgets. The tray icon may be inside the arrow menu next to the clock; drag it onto the taskbar to keep it always visible." }
+          },
+          {
+            "@type": "Question",
+            "name": "Which players does the now-playing widget support?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Any app that uses the Windows media controls: Spotify, YouTube and other sites in Chrome or Edge, VLC and many others. If a track shows up in the Windows volume flyout, it will show up in the widget. Cover art depends on what the app provides." }
+          },
+          {
+            "@type": "Question",
+            "name": "Does it work on Windows 10?",
+            "acceptedAnswer": { "@type": "Answer", "text": "It is developed and tested on Windows 11. Windows 10 version 1809 or newer provides all the APIs it needs, so it should work, but it is less tested. Please open an issue if something looks wrong." }
+          },
+          {
+            "@type": "Question",
+            "name": "Does it support several monitors or a taskbar that is not at the bottom?",
+            "acceptedAnswer": { "@type": "Answer", "text": "It is designed for a taskbar at the bottom of the primary monitor. You can drag the stats widget to another position, but the default placement and the now-playing widget assume the bottom taskbar." }
+          },
+          {
+            "@type": "Question",
+            "name": "A widget covers something on my taskbar. What can I do?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Drag the stats widget to a free spot. The now-playing widget sits at the far left and can cover the Widgets button; turn it off with Show now playing in the menu if that bothers you." }
+          },
+          {
+            "@type": "Question",
+            "name": "How do I make it start with Windows?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Right-click a widget and turn on Start with Windows. If you later move the executable, turn the option off and on again so the startup entry points to the new location." }
+          },
+          {
+            "@type": "Question",
+            "name": "How do I uninstall it?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Turn off Start with Windows, choose Exit from the menu and delete TaskbarMonitor.exe. Optionally delete the registry key HKEY_CURRENT_USER\\Software\\TaskbarMonitor. Nothing else is installed." }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="../"><img src="../favicon.svg" alt="" width="24" height="24">Taskbar Monitor</a>
+      <nav class="site-nav" aria-label="Main">
+        <a href="../#features">Features</a>
+        <a href="../#install">Install</a>
+        <a href="./" aria-current="page">FAQ</a>
+        <a href="https://github.com/AlessandroZappatore/TaskbarMonitor">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="faq">
+    <div class="wrap">
+      <h1>Frequently asked questions</h1>
+      <p class="lead">Can't find your answer? <a href="https://github.com/AlessandroZappatore/TaskbarMonitor/issues">Open an issue</a> on GitHub.</p>
+
+      <h2 id="smartscreen">Why does Windows show a SmartScreen warning?</h2>
+      <p>The executable is not code-signed, because code-signing certificates cost money and this is a free hobby project. Windows warns about any unsigned program that few people have downloaded. Click <em>More info</em>, then <em>Run anyway</em>.</p>
+      <p>If you would rather not run a downloaded file, the program is a single readable source file. Build it yourself with <code>build.bat</code>, using the compiler included with Windows.</p>
+
+      <h2 id="internet">Does Taskbar Monitor connect to the internet?</h2>
+      <p>No. It makes no network connections, has no telemetry and no accounts. It only reads local counters and stores its settings in the registry under <code>HKEY_CURRENT_USER\Software\TaskbarMonitor</code>.</p>
+
+      <h2 id="temperature">Why is the temperature different from HWiNFO or other tools?</h2>
+      <p>Taskbar Monitor shows the thermal zone temperature that Windows reports through ACPI. It is a system-level value, not a per-core reading. Exact per-core temperatures need a kernel driver and administrator rights, which this app avoids on purpose. If your PC does not expose a thermal zone, the widget shows two dashes.</p>
+
+      <h2 id="hide">How do I hide the widgets and bring them back?</h2>
+      <p>Right-click a widget and choose <em>Hide widgets</em>. To show them again, use any of these:</p>
+      <ul class="plain">
+        <li>Click the Taskbar Monitor icon in the notification area.</li>
+        <li>Press <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>M</kbd>.</li>
+        <li>Open <code>TaskbarMonitor.exe</code> again.</li>
+        <li>Right-click the tray icon and choose <em>Show widgets</em>.</li>
+      </ul>
+      <p>The tray icon may be inside the <code>^</code> menu next to the clock. Drag it onto the taskbar to keep it always visible.</p>
+
+      <h2 id="players">Which players does the now-playing widget support?</h2>
+      <p>Any app that uses the Windows media controls: Spotify, YouTube and other sites in Chrome or Edge, VLC and many others. If a track shows up in the Windows volume flyout, it will show up in the widget. Cover art depends on what the app provides.</p>
+
+      <h2 id="windows10">Does it work on Windows 10?</h2>
+      <p>It is developed and tested on Windows 11. Windows 10 version 1809 or newer provides all the APIs it needs, so it should work, but it is less tested. Please <a href="https://github.com/AlessandroZappatore/TaskbarMonitor/issues">open an issue</a> if something looks wrong.</p>
+
+      <h2 id="monitors">Does it support several monitors or a taskbar that is not at the bottom?</h2>
+      <p>It is designed for a taskbar at the bottom of the primary monitor. You can drag the stats widget to another position, but the default placement and the now-playing widget assume the bottom taskbar.</p>
+
+      <h2 id="covers">A widget covers something on my taskbar. What can I do?</h2>
+      <p>Drag the stats widget to a free spot. The now-playing widget sits at the far left and can cover the Widgets button; turn it off with <em>Show now playing</em> in the menu if that bothers you.</p>
+
+      <h2 id="startup">How do I make it start with Windows?</h2>
+      <p>Right-click a widget and turn on <em>Start with Windows</em>. If you later move the executable, turn the option off and on again so the startup entry points to the new location.</p>
+
+      <h2 id="uninstall">How do I uninstall it?</h2>
+      <p>Turn off <em>Start with Windows</em>, choose <em>Exit</em> from the menu and delete <code>TaskbarMonitor.exe</code>. Optionally delete the registry key <code>HKEY_CURRENT_USER\Software\TaskbarMonitor</code>. Nothing else is installed.</p>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <span>&copy; 2026 Alessandro Zappatore &middot; MIT License</span>
+      <span><a href="../">Home</a> &middot; <a href="https://github.com/AlessandroZappatore/TaskbarMonitor/releases">Releases</a> &middot; <a href="https://github.com/AlessandroZappatore/TaskbarMonitor/issues">Report an issue</a></span>
+    </div>
+  </footer>
+</body>
+</html>

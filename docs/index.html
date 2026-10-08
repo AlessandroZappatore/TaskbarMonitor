@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Taskbar Monitor: network speed, CPU and RAM on your Windows taskbar</title>
+  <meta name="description" content="Taskbar Monitor is a free, open-source Windows overlay that shows live download and upload speed, CPU, RAM, CPU temperature and the track you are playing, right on the taskbar. One 25 KB file, no installer.">
+  <link rel="canonical" href="https://alessandrozappatore.github.io/TaskbarMonitor/">
+  <meta name="theme-color" content="#14181c" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#fafaf8" media="(prefers-color-scheme: light)">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Taskbar Monitor">
+  <meta property="og:title" content="Taskbar Monitor: network speed, CPU and RAM on your Windows taskbar">
+  <meta property="og:description" content="Free, open-source overlay for the Windows taskbar. Live network speed, CPU, RAM, temperature and now playing. One 25 KB file, no installer, no telemetry.">
+  <meta property="og:url" content="https://alessandrozappatore.github.io/TaskbarMonitor/">
+  <meta property="og:image" content="https://alessandrozappatore.github.io/TaskbarMonitor/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="A Windows taskbar showing the now-playing widget on the left and CPU, RAM, temperature and network speed next to the clock.">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Taskbar Monitor: network speed, CPU and RAM on your Windows taskbar">
+  <meta name="twitter:description" content="Free, open-source overlay for the Windows taskbar. One 25 KB file, no installer, no telemetry.">
+  <meta name="twitter:image" content="https://alessandrozappatore.github.io/TaskbarMonitor/og-image.png">
+
+  <link rel="stylesheet" href="style.css">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Taskbar Monitor",
+    "applicationCategory": "UtilitiesApplication",
+    "operatingSystem": "Windows 10, Windows 11",
+    "description": "A lightweight Windows taskbar overlay that shows live network speed, CPU and RAM usage, CPU temperature and the currently playing track.",
+    "url": "https://alessandrozappatore.github.io/TaskbarMonitor/",
+    "downloadUrl": "https://github.com/AlessandroZappatore/TaskbarMonitor/releases/latest/download/TaskbarMonitor.exe",
+    "codeRepository": "https://github.com/AlessandroZappatore/TaskbarMonitor",
+    "license": "https://opensource.org/licenses/MIT",
+    "isAccessibleForFree": true,
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+    "image": "https://alessandrozappatore.github.io/TaskbarMonitor/og-image.png",
+    "author": { "@type": "Person", "name": "Alessandro Zappatore", "url": "https://github.com/AlessandroZappatore" }
+  }
+  </script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="./"><img src="favicon.svg" alt="" width="24" height="24">Taskbar Monitor</a>
+      <nav class="site-nav" aria-label="Main">
+        <a href="#features">Features</a>
+        <a href="#install">Install</a>
+        <a href="faq/">FAQ</a>
+        <a href="https://github.com/AlessandroZappatore/TaskbarMonitor">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <div class="wrap hero">
+      <h1>Network speed, CPU, RAM and music on your Windows taskbar</h1>
+      <p class="lead">Taskbar Monitor is a small overlay that sits on the taskbar and shows what your PC is doing right now. One 25&nbsp;KB file, no installer, nothing sent anywhere.</p>
+      <div class="actions">
+        <a class="btn primary" id="download" href="https://github.com/AlessandroZappatore/TaskbarMonitor/releases/latest/download/TaskbarMonitor.exe">Download for Windows</a>
+        <a class="btn" href="https://github.com/AlessandroZappatore/TaskbarMonitor">View source on GitHub</a>
+      </div>
+      <p class="meta">Free and open source (MIT) &middot; Windows 10 and 11, 64-bit &middot; <span id="version">latest release</span></p>
+
+      <figure class="shot">
+        <img src="taskbar.png" width="1263" height="72" alt="A Windows 11 taskbar. On the left, a widget with the cover, title and artist of the playing song. Next to the clock, CPU 32%, 77 degrees, RAM 57%, download 2.3 KB/s and upload 845 B/s.">
+        <figcaption>Both widgets on a Windows 11 taskbar. The middle of the taskbar is omitted.</figcaption>
+      </figure>
+    </div>
+
+    <div class="wrap">
+      <dl class="facts" aria-label="Key facts">
+        <div><dt>25 KB</dt><dd>single executable</dd></div>
+        <div><dt>~50 MB</dt><dd>of RAM in use</dd></div>
+        <div><dt>0</dt><dd>network connections made</dd></div>
+        <div><dt>MIT</dt><dd>license, free to use</dd></div>
+      </dl>
+    </div>
+
+    <section id="features">
+      <div class="wrap">
+        <h2>What it shows</h2>
+        <p>Two small widgets, each with a fixed layout so numbers stay in the same place when they change.</p>
+        <div class="two">
+          <div>
+            <h3>System stats</h3>
+            <p>Next to the notification area: download and upload speed, CPU load and temperature, and RAM usage. Values go from green to yellow to red as load or temperature rise.</p>
+            <figure class="shot">
+              <img src="screenshot-stats.png" width="337" height="63" alt="Widget showing CPU 8%, 49 degrees, RAM 62%, download 264 B/s, upload 220 B/s." loading="lazy">
+            </figure>
+          </div>
+          <div>
+            <h3>Now playing</h3>
+            <p>At the left of the taskbar: cover art, title and artist of whatever is playing in Spotify, a browser tab, VLC and other media apps. Click it to play or pause. It disappears when nothing is playing.</p>
+            <figure class="shot">
+              <img src="screenshot-media.png" width="462" height="66" alt="Widget showing the cover, title and artist of the current song." loading="lazy">
+            </figure>
+          </div>
+        </div>
+
+        <h3 style="margin-top:2.5rem">Details</h3>
+        <ul class="plain">
+          <li><strong>Hide and show.</strong> Hide both widgets from the menu and bring them back with a click on the tray icon, <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>M</kbd>, or by opening the app again.</li>
+          <li><strong>Starts with Windows</strong>, if you turn it on. Off by default.</li>
+          <li><strong>Stays visible</strong> when the Start menu or other flyouts open, without flicker.</li>
+          <li><strong>Follows your theme</strong>: light or dark taskbar, and sharp text on high-DPI screens.</li>
+          <li><strong>Movable.</strong> Drag the stats widget anywhere; its position is remembered.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="install">
+      <div class="wrap">
+        <h2>Install</h2>
+        <ol class="steps">
+          <li>Download <a href="https://github.com/AlessandroZappatore/TaskbarMonitor/releases/latest/download/TaskbarMonitor.exe"><code>TaskbarMonitor.exe</code></a> from the latest release.</li>
+          <li>Put it in a folder you will keep, for example <code>C:\Tools\TaskbarMonitor\</code>.</li>
+          <li>Double-click it. The widgets appear on the taskbar. Right-click either one to open the menu, where you can turn on <em>Start with Windows</em>.</li>
+        </ol>
+        <div class="note">
+          <p><strong>SmartScreen warning.</strong> The executable is not code-signed, so Windows may say &ldquo;Windows protected your PC&rdquo;. Click <em>More info</em>, then <em>Run anyway</em>. If you prefer not to run a downloaded file, the whole program is one readable source file and builds with the compiler that ships with Windows. See <a href="#source">build from source</a>.</p>
+        </div>
+        <p>To remove it, turn off <em>Start with Windows</em>, choose <em>Exit</em> and delete the file. Nothing else is installed.</p>
+      </div>
+    </section>
+
+    <section id="how">
+      <div class="wrap">
+        <h2>Where the numbers come from</h2>
+        <table>
+          <thead><tr><th scope="col">Value</th><th scope="col">Source</th></tr></thead>
+          <tbody>
+            <tr><td>Network speed</td><td>Byte counters of all active network adapters, sampled every second.</td></tr>
+            <tr><td>CPU and RAM</td><td>The same Windows counters Task Manager is built on.</td></tr>
+            <tr><td>Temperature</td><td>The thermal zone reported by the system (ACPI). It is not a per-core reading, so it can differ from tools such as HWiNFO. If your PC does not expose it, the widget shows <code>--</code>.</td></tr>
+            <tr><td>Now playing</td><td>Windows media controls, the same ones used by the keyboard media keys and the volume flyout.</td></tr>
+          </tbody>
+        </table>
+        <p>Windows 11 no longer allows third-party toolbars on the taskbar, so Taskbar Monitor draws small borderless windows on top of it. Because of that, a widget can cover whatever sits under it, such as the Widgets button on the left.</p>
+        <p>More questions? See the <a href="faq/">FAQ</a>.</p>
+      </div>
+    </section>
+
+    <section id="privacy">
+      <div class="wrap">
+        <h2>Privacy</h2>
+        <p>The app never connects to the internet and collects nothing. It stores two things on your PC: the widget position and settings under <code>HKEY_CURRENT_USER\Software\TaskbarMonitor</code>, and, only if you enable it, a startup entry.</p>
+      </div>
+    </section>
+
+    <section id="source">
+      <div class="wrap">
+        <h2>Open source</h2>
+        <p>The code is on <a href="https://github.com/AlessandroZappatore/TaskbarMonitor">GitHub</a> under the MIT license. Bug reports and pull requests are welcome. To build it yourself you only need Windows:</p>
+<pre><code>git clone https://github.com/AlessandroZappatore/TaskbarMonitor.git
+cd TaskbarMonitor
+build.bat</code></pre>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <span>&copy; 2026 Alessandro Zappatore &middot; MIT License</span>
+      <span><a href="faq/">FAQ</a> &middot; <a href="https://github.com/AlessandroZappatore/TaskbarMonitor/releases">Releases</a> &middot; <a href="https://github.com/AlessandroZappatore/TaskbarMonitor/issues">Report an issue</a></span>
+    </div>
+  </footer>
+
+  <script>
+    // Shows the current version number next to the download button. The page works without it.
+    fetch("https://api.github.com/repos/AlessandroZappatore/TaskbarMonitor/releases/latest")
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) { if (j && j.tag_name) document.getElementById("version").textContent = "version " + j.tag_name.replace(/^v/, ""); })
+      .catch(function () {});
+  </script>
+</body>
+</html>

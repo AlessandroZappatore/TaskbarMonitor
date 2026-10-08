@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://alessandrozappatore.github.io/TaskbarMonitor/sitemap.xml

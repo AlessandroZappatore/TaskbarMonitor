@@ -1,8 +1,10 @@
 # Taskbar Monitor
 
+**Website: [alessandrozappatore.github.io/TaskbarMonitor](https://alessandrozappatore.github.io/TaskbarMonitor/)** · [Download](../../releases/latest) · [FAQ](https://alessandrozappatore.github.io/TaskbarMonitor/faq/)
+
 A tiny, free and open-source Windows overlay that shows **live network speed, CPU, RAM, CPU temperature and the currently playing track** right on your taskbar.
 
-- Single ~20 KB executable, no installer, no runtime to install
+- Single ~25 KB executable, no installer, no runtime to install
 - Uses ~50 MB of RAM and practically 0% CPU
 - No network access, no telemetry, no accounts
 
