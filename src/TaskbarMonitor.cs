@@ -37,7 +37,15 @@ class TaskbarMonitor : Form
     NowPlayingBar media;
     Point pos;
 
-    [STAThread]
+    const string ShowEvent = @"Local\TaskbarMonitor.Show";
+    const int HotkeyId = 1, WM_HOTKEY = 0x0312, MOD_ALT = 1, MOD_CONTROL = 2, MOD_NOREPEAT = 0x4000, VK_M = 0x4D;
+    [DllImport("user32.dll")] static extern bool RegisterHotKey(IntPtr h, int id, int mods, int vk);
+    [DllImport("user32.dll")] static extern bool UnregisterHotKey(IntPtr h, int id);
+    static System.Threading.EventWaitHandle showEvent;
+    static bool StartedByAutostart;
+    bool hidden;
+    ToolStripMenuItem hideItem;
+
     // porta avvio automatico e posizione dalla vecchia versione "InternetSpeedMeter"
     static void Migrate()
     {
@@ -48,8 +56,15 @@ class TaskbarMonitor : Form
                 if (run != null && run.GetValue("InternetSpeedMeter") != null)
                 {
                     run.DeleteValue("InternetSpeedMeter", false);
-                    run.SetValue(AppName, "\"" + Application.ExecutablePath + "\"");
+                    run.SetValue(AppName, "\"" + Application.ExecutablePath + "\" --autostart");
                 }
+            }
+            using (var run2 = Registry.CurrentUser.OpenSubKey(RunKey, true))
+            {
+                // voce di avvio creata da versioni precedenti: aggiunge --autostart
+                var cur0 = run2 == null ? null : run2.GetValue(AppName) as string;
+                if (cur0 != null && !cur0.Contains("--autostart"))
+                    run2.SetValue(AppName, "\"" + Application.ExecutablePath + "\" --autostart");
             }
             using (var old = Registry.CurrentUser.OpenSubKey(@"Software\InternetSpeedMeter"))
             using (var cur = Registry.CurrentUser.CreateSubKey(SettingsKey))
@@ -62,12 +77,20 @@ class TaskbarMonitor : Form
         catch { }
     }
 
-    static void Main()
+    [STAThread]
+    static void Main(string[] args)
     {
         bool created;
         using (var m = new System.Threading.Mutex(true, AppName, out created))
         {
-            if (!created) return;
+            if (!created)
+            {
+                // gia' in esecuzione: riaprire l'app riattiva i widget nascosti
+                try { System.Threading.EventWaitHandle.OpenExisting(ShowEvent).Set(); } catch { }
+                return;
+            }
+            showEvent = new System.Threading.EventWaitHandle(false, System.Threading.EventResetMode.AutoReset, ShowEvent);
+            StartedByAutostart = Array.IndexOf(args, "--autostart") >= 0;
             Migrate();
             if (!SetProcessDpiAwarenessContext(new IntPtr(-4))) SetProcessDPIAware();
             try { S = GetDpiForSystem() / 96f; } catch { S = 1f; }
@@ -86,28 +109,43 @@ class TaskbarMonitor : Form
         InitStats();
 
         var menu = new ContextMenuStrip();
-        autoStartItem = new ToolStripMenuItem("Avvia con Windows");
+        hidden = StartedByAutostart && HiddenSetting();
+        hideItem = new ToolStripMenuItem(hidden ? "Show widgets" : "Hide widgets");
+        hideItem.Click += (s, e) => SetHidden(!hidden);
+        autoStartItem = new ToolStripMenuItem("Start with Windows");
         autoStartItem.Checked = IsAutoStart();
         autoStartItem.Click += (s, e) => { SetAutoStart(!autoStartItem.Checked); autoStartItem.Checked = IsAutoStart(); };
-        var mediaItem = new ToolStripMenuItem("Mostra brano in riproduzione");
+        var mediaItem = new ToolStripMenuItem("Show now playing");
         mediaItem.Checked = MediaEnabled();
         mediaItem.Click += (s, e) => { mediaItem.Checked = !mediaItem.Checked; SetMediaEnabled(mediaItem.Checked); media.Enabled2 = mediaItem.Checked; };
-        var reset = new ToolStripMenuItem("Riposiziona sulla taskbar");
+        var reset = new ToolStripMenuItem("Reposition on taskbar");
         reset.Click += (s, e) => PlaceDefault();
-        var exit = new ToolStripMenuItem("Esci");
+        var exit = new ToolStripMenuItem("Exit");
         exit.Click += (s, e) => { tray.Visible = false; Application.Exit(); };
-        menu.Items.AddRange(new ToolStripItem[] { autoStartItem, mediaItem, reset, new ToolStripSeparator(), exit });
+        menu.Items.AddRange(new ToolStripItem[] { hideItem, new ToolStripSeparator(), autoStartItem, mediaItem, reset, new ToolStripSeparator(), exit });
         ContextMenuStrip = menu;
 
         tray.Icon = SystemIcons.Information;
-        tray.Text = "Taskbar Monitor";
         tray.ContextMenuStrip = menu;
+        tray.MouseClick += (s, e) => { if (e.Button == MouseButtons.Left) SetHidden(!hidden); };
         tray.Visible = true;
+        UpdateTrayText();
 
         var h0 = Handle; TaskbarHost.Attach(this);
+        RegisterHotKey(Handle, HotkeyId, MOD_CONTROL | MOD_ALT | MOD_NOREPEAT, VK_M);
         LoadPosition();
         media = new NowPlayingBar();
         media.Enabled2 = MediaEnabled();
+        media.Suppressed = hidden;
+
+        // riaprire l'exe mentre e' gia' in esecuzione fa riapparire i widget
+        new System.Threading.Thread(() =>
+        {
+            while (showEvent.WaitOne())
+            {
+                try { BeginInvoke(new Action(() => SetHidden(false))); } catch { }
+            }
+        }) { IsBackground = true }.Start();
 
         MouseDown += (s, e) => { if (e.Button == MouseButtons.Left) { dragging = true; dragStart = e.Location; } };
         MouseMove += (s, e) => { if (dragging) SetPos(Cursor.Position.X - dragStart.X, Cursor.Position.Y - dragStart.Y); };
@@ -117,6 +155,49 @@ class TaskbarMonitor : Form
         timer.Tick += (s, e) => Update1s();
         timer.Start();
         Update1s();
+    }
+
+    // permette di avviare l'app gia' nascosta (solo l'icona nell'area di notifica)
+    protected override void SetVisibleCore(bool value)
+    {
+        base.SetVisibleCore(hidden ? false : value);
+    }
+
+    protected override void WndProc(ref Message m)
+    {
+        if (m.Msg == WM_HOTKEY && m.WParam.ToInt32() == HotkeyId) SetHidden(!hidden);
+        base.WndProc(ref m);
+    }
+
+    void SetHidden(bool value)
+    {
+        hidden = value;
+        using (var k = Registry.CurrentUser.CreateSubKey(SettingsKey)) k.SetValue("Hidden", hidden ? 1 : 0);
+        hideItem.Text = hidden ? "Show widgets" : "Hide widgets";
+        UpdateTrayText();
+        media.Suppressed = hidden;
+        if (hidden)
+        {
+            Hide();
+            tray.ShowBalloonTip(4000, "Taskbar Monitor", "Widgets hidden. Click this icon or press Ctrl+Alt+M to show them again.", ToolTipIcon.Info);
+        }
+        else
+        {
+            Show();
+            TaskbarHost.Ensure(this, pos);
+            Invalidate();
+        }
+    }
+
+    void UpdateTrayText()
+    {
+        tray.Text = hidden ? "Taskbar Monitor (hidden) - click to show" : "Taskbar Monitor - click to hide";
+    }
+
+    static bool HiddenSetting()
+    {
+        using (var k = Registry.CurrentUser.OpenSubKey(SettingsKey))
+            return k != null && Convert.ToInt32(k.GetValue("Hidden", 0)) == 1;
     }
 
     protected override bool ShowWithoutActivation { get { return true; } }
@@ -192,7 +273,7 @@ class TaskbarMonitor : Form
     {
         using (var k = Registry.CurrentUser.OpenSubKey(RunKey, true))
         {
-            if (on) k.SetValue(AppName, "\"" + Application.ExecutablePath + "\"");
+            if (on) k.SetValue(AppName, "\"" + Application.ExecutablePath + "\" --autostart");
             else k.DeleteValue(AppName, false);
         }
     }
@@ -237,7 +318,6 @@ class TaskbarMonitor : Form
 
         TaskbarHost.Ensure(this, pos);
         ReadStats();
-        tray.Text = "↓ " + Fmt(down) + "  ↑ " + Fmt(up);
         Invalidate();
     }
 
@@ -346,7 +426,7 @@ class TaskbarMonitor : Form
 
     protected override void Dispose(bool d)
     {
-        if (d) { tray.Dispose(); font.Dispose(); timer.Dispose(); }
+        if (d) { UnregisterHotKey(Handle, HotkeyId); tray.Dispose(); font.Dispose(); timer.Dispose(); }
         base.Dispose(d);
     }
 }
@@ -360,10 +440,16 @@ class NowPlayingBar : Form
     Font f1 = new Font("Segoe UI", 9f, FontStyle.Bold), f2 = new Font("Segoe UI", 8f);
     string title = "", artist = "", coverKey = "";
     Image cover;
-    bool playing, busy, enabled;
+    bool playing, busy, enabled, suppressed;
     Point screenPos;
     GlobalSystemMediaTransportControlsSessionManager mgr;
     GlobalSystemMediaTransportControlsSession session;
+
+    public bool Suppressed
+    {
+        get { return suppressed; }
+        set { suppressed = value; if (value) Hide(); }
+    }
 
     public bool Enabled2
     {
@@ -393,7 +479,7 @@ class NowPlayingBar : Form
             System.Threading.ThreadPool.QueueUserWorkItem(_ => { try { Wait(se.TryTogglePlayPauseAsync()); } catch { } });
         };
         timer.Interval = 1000;
-        timer.Tick += (o, e) => { if (enabled) Poll(); };
+        timer.Tick += (o, e) => { if (enabled && !suppressed) Poll(); };
         timer.Start();
     }
 
@@ -457,7 +543,7 @@ class NowPlayingBar : Form
             {
                 if (coverChanged) { var old = cover; cover = newCover; coverKey = t + "|" + a; if (old != null) old.Dispose(); Invalidate(); }
                 if (t != title || a != artist || pl != playing) { title = t; artist = a; playing = pl; Invalidate(); }
-                if (string.IsNullOrEmpty(t) || !enabled) { Hide(); return; }
+                if (string.IsNullOrEmpty(t) || !enabled || suppressed) { Hide(); return; }
                 if (!Visible) Show();
                 TaskbarHost.Ensure(this, screenPos);
             }));

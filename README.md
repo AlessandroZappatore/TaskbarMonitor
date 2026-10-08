@@ -23,6 +23,7 @@ A tiny, free and open-source Windows overlay that shows **live network speed, CP
 - The stats overlay can be dragged anywhere; its position is remembered.
 - Optional **Start with Windows**.
 - Only one instance runs at a time.
+- **Hide / show** the widgets any time (see below).
 
 ## Download
 
@@ -39,6 +40,7 @@ A tiny, free and open-source Windows overlay that shows **live network speed, CP
 
 Right-click either overlay (or the tray icon next to the clock) to open the menu:
 
+- **Hide widgets** / **Show widgets**: hides or restores both overlays.
 - **Start with Windows**: toggles automatic startup (stored in the current user's `Run` registry key).
 - **Show now playing**: shows or hides the now-playing overlay.
 - **Reposition on taskbar**: resets the stats overlay to its default place.
@@ -47,6 +49,18 @@ Right-click either overlay (or the tray icon next to the clock) to open the menu
 Drag the stats overlay with the left mouse button to move it. Left-click the now-playing overlay to play/pause.
 
 If you move the `.exe` to another folder after enabling *Start with Windows*, toggle the option off and on again so the startup entry points to the new location.
+
+### Hiding and showing the widgets
+
+Choose **Hide widgets** in the menu to hide both overlays. Taskbar Monitor keeps running and its icon stays in the notification area (click the `^` arrow next to the clock if the icon is in the overflow; drag it onto the taskbar to keep it always visible). You can bring the widgets back in any of these ways:
+
+- **Click the tray icon** (it toggles hide/show).
+- Press **Ctrl + Alt + M** (toggles hide/show).
+- **Open `TaskbarMonitor.exe` again**: if it is already running, it just shows the widgets.
+- Right-click the tray icon and choose **Show widgets**.
+
+A balloon reminds you how to restore them when you hide. If you hide the widgets and restart Windows, they stay hidden when started automatically; launching the app manually always shows them.
+
 
 ## Requirements
 
