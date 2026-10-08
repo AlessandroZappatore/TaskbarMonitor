@@ -497,26 +497,22 @@ class NowPlayingBar : Form
     }
 }
 
-// Aggancia una finestra alla taskbar come figlia: resta visibile anche quando si apre Start
-// (che sta su un livello superiore ai normali "sempre in primo piano") senza dover
-// ripristinare lo z-order di continuo.
+// Rende la finestra "di proprieta'" della taskbar. Windows tiene sempre una finestra posseduta
+// sopra il suo proprietario: quando la taskbar sale (es. si apre Start) salgono anche i riquadri,
+// senza dover ripristinare lo z-order di continuo (nessun flicker).
 static class TaskbarHost
 {
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern IntPtr FindWindow(string cls, string title);
-    [DllImport("user32.dll")] static extern IntPtr SetParent(IntPtr child, IntPtr parent);
-    [DllImport("user32.dll")] static extern IntPtr GetParent(IntPtr h);
     [DllImport("user32.dll")] static extern IntPtr GetWindow(IntPtr h, uint cmd);
-    [DllImport("user32.dll")] static extern bool IsWindow(IntPtr h);
-    [DllImport("user32.dll")] static extern bool ScreenToClient(IntPtr h, ref Point p);
     [DllImport("user32.dll")] static extern bool GetWindowRect(IntPtr h, out RECT r);
     [DllImport("user32.dll")] static extern bool SetWindowPos(IntPtr h, IntPtr after, int x, int y, int cx, int cy, uint flags);
     [DllImport("user32.dll", EntryPoint = "GetWindowLongPtr")] static extern IntPtr GetLongPtr(IntPtr h, int i);
     [DllImport("user32.dll", EntryPoint = "SetWindowLongPtr")] static extern IntPtr SetLongPtr(IntPtr h, int i, IntPtr v);
     [StructLayout(LayoutKind.Sequential)] struct RECT { public int L, T, R, B; }
 
-    const int GWL_STYLE = -16;
-    const long WS_POPUP = 0x80000000L, WS_CHILD = 0x40000000L;
+    const int GWLP_HWNDPARENT = -8;
     const uint SWP_NOSIZE = 1, SWP_NOMOVE = 2, SWP_NOACTIVATE = 0x10, GW_HWNDPREV = 3;
+    static readonly IntPtr HWND_TOPMOST = new IntPtr(-1);
 
     static IntPtr Taskbar { get { return FindWindow("Shell_TrayWnd", null); } }
 
@@ -524,20 +520,14 @@ static class TaskbarHost
     {
         IntPtr tb = Taskbar, h = f.Handle;
         if (tb == IntPtr.Zero) return false;
-        long style = GetLongPtr(h, GWL_STYLE).ToInt64();
-        style = (style & ~WS_POPUP) | WS_CHILD;
-        SetLongPtr(h, GWL_STYLE, new IntPtr(style));
-        SetParent(h, tb);
-        return GetParent(h) == tb;
+        SetLongPtr(h, GWLP_HWNDPARENT, tb);
+        SetWindowPos(h, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+        return GetLongPtr(h, GWLP_HWNDPARENT) == tb;
     }
 
-    // posizione in coordinate schermo (indipendente dal fatto che la finestra sia figlia)
     public static void MoveTo(Form f, int x, int y)
     {
-        var p = new Point(x, y);
-        IntPtr parent = GetParent(f.Handle);
-        if (parent != IntPtr.Zero) ScreenToClient(parent, ref p);
-        SetWindowPos(f.Handle, IntPtr.Zero, p.X, p.Y, 0, 0, SWP_NOSIZE | SWP_NOACTIVATE);
+        SetWindowPos(f.Handle, HWND_TOPMOST, x, y, 0, 0, SWP_NOSIZE | SWP_NOACTIVATE);
     }
 
     public static Point ScreenPos(Form f)
@@ -546,18 +536,18 @@ static class TaskbarHost
         return new Point(r.L, r.T);
     }
 
-    // Da chiamare ogni tanto: riaggancia se Explorer e' stato riavviato e riporta la finestra
-    // in cima ai fratelli solo se qualcun altro le sta sopra (nessuna operazione, quindi nessun flicker, altrimenti).
+    // Riaggancia se Explorer e' stato riavviato; ripristina lo z-order solo se qualcosa e' davvero
+    // finito sopra la finestra (altrimenti non fa nulla, quindi nessun flicker).
     public static void Ensure(Form f, Point screenPos)
     {
         IntPtr h = f.Handle, tb = Taskbar;
         if (tb == IntPtr.Zero) return;
-        if (GetParent(h) != tb)
+        if (GetLongPtr(h, GWLP_HWNDPARENT) != tb)
         {
             if (Attach(f)) MoveTo(f, screenPos.X, screenPos.Y);
             return;
         }
         if (GetWindow(h, GW_HWNDPREV) != IntPtr.Zero)
-            SetWindowPos(h, IntPtr.Zero, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+            SetWindowPos(h, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
     }
 }
