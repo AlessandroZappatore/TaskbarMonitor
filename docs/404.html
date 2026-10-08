@@ -7,6 +7,20 @@
   <meta name="robots" content="noindex">
   <link rel="icon" href="/TaskbarMonitor/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/TaskbarMonitor/style.css">
+  <script>
+    // Indirizzi che la gente digita a mano (maiuscole, .html, ...) portano alla pagina giusta.
+    (function () {
+      var base = "/TaskbarMonitor", key = base.toLowerCase();
+      var p = location.pathname.toLowerCase().replace(/\/+$/, "");
+      var map = {};
+      map[key + "/faq"] = base + "/faq/";
+      map[key + "/faq.html"] = base + "/faq/";
+      map[key + "/faq/index.html"] = base + "/faq/";
+      map[key + "/index.html"] = base + "/";
+      map[key] = base + "/";
+      if (map[p]) location.replace(map[p] + location.hash);
+    })();
+  </script>
 </head>
 <body>
   <main class="faq">

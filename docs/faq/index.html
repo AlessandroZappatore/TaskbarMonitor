@@ -37,7 +37,7 @@
           {
             "@type": "Question",
             "name": "Why does Windows show a SmartScreen warning?",
-            "acceptedAnswer": { "@type": "Answer", "text": "The executable is not code-signed, because code-signing certificates cost money and this is a free hobby project. Windows warns about any unsigned program that few people have downloaded. Click More info, then Run anyway. The program is a single readable source file that you can build yourself with build.bat, using the compiler included with Windows." }
+            "acceptedAnswer": { "@type": "Answer", "text": "The executable is not code-signed, because code-signing certificates cost money and this is a free hobby project. Windows warns about any unsigned program that few people have downloaded. Click More info, then Run anyway. The program is a few small, readable source files that you can build yourself with build.bat, using the compiler included with Windows." }
           },
           {
             "@type": "Question",
@@ -53,6 +53,16 @@
             "@type": "Question",
             "name": "How do I hide the widgets and bring them back?",
             "acceptedAnswer": { "@type": "Answer", "text": "Right-click a widget and choose Hide widgets. To show them again, click the Taskbar Monitor icon in the notification area, press Ctrl+Alt+M, open TaskbarMonitor.exe again, or right-click the tray icon and choose Show widgets. The tray icon may be inside the arrow menu next to the clock; drag it onto the taskbar to keep it always visible." }
+          },
+          {
+            "@type": "Question",
+            "name": "Can I choose what the widget shows?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Yes. Right-click a widget and choose Settings. The stats widget has six positions in three columns of two. For each one you can pick download speed, upload speed, CPU usage, CPU temperature, RAM usage or used GB, disk activity, disk read or write speed, free space on the system drive, GPU usage, battery or PC uptime, or leave it empty. Changes apply immediately and empty columns disappear, so the widget only takes the space it needs." }
+          },
+          {
+            "@type": "Question",
+            "name": "Why does the GPU or temperature show two dashes?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Two dashes mean Windows does not expose that value on your PC through the counters Taskbar Monitor uses. GPU usage relies on the GPU Engine performance counters, which need a recent graphics driver. Temperature relies on an ACPI thermal zone. Battery also shows two dashes on a PC without a battery." }
           },
           {
             "@type": "Question",
@@ -110,7 +120,7 @@
 
       <h2 id="smartscreen">Why does Windows show a SmartScreen warning?</h2>
       <p>The executable is not code-signed, because code-signing certificates cost money and this is a free hobby project. Windows warns about any unsigned program that few people have downloaded. Click <em>More info</em>, then <em>Run anyway</em>.</p>
-      <p>If you would rather not run a downloaded file, the program is a single readable source file. Build it yourself with <code>build.bat</code>, using the compiler included with Windows.</p>
+      <p>If you would rather not run a downloaded file, the program is a few small, readable source files. Build it yourself with <code>build.bat</code>, using the compiler included with Windows.</p>
 
       <h2 id="internet">Does Taskbar Monitor connect to the internet?</h2>
       <p>No. It makes no network connections, has no telemetry and no accounts. It only reads local counters and stores its settings in the registry under <code>HKEY_CURRENT_USER\Software\TaskbarMonitor</code>.</p>
@@ -127,6 +137,12 @@
         <li>Right-click the tray icon and choose <em>Show widgets</em>.</li>
       </ul>
       <p>The tray icon may be inside the <code>^</code> menu next to the clock. Drag it onto the taskbar to keep it always visible.</p>
+
+      <h2 id="choose">Can I choose what the widget shows?</h2>
+      <p>Yes. Right-click a widget and choose <em>Settings</em>. The stats widget has six positions in three columns of two. For each one you can pick download speed, upload speed, CPU usage, CPU temperature, RAM usage or used GB, disk activity, disk read or write speed, free space on the system drive, GPU usage, battery or PC uptime, or leave it empty. Changes apply immediately and empty columns disappear, so the widget only takes the space it needs.</p>
+
+      <h2 id="dashes">Why does the GPU or temperature show two dashes?</h2>
+      <p>Two dashes mean Windows does not expose that value on your PC through the counters Taskbar Monitor uses. GPU usage relies on the <em>GPU Engine</em> performance counters, which need a recent graphics driver. Temperature relies on an ACPI thermal zone. Battery also shows two dashes on a PC without a battery.</p>
 
       <h2 id="players">Which players does the now-playing widget support?</h2>
       <p>Any app that uses the Windows media controls: Spotify, YouTube and other sites in Chrome or Edge, VLC and many others. If a track shows up in the Windows volume flyout, it will show up in the widget. Cover art depends on what the app provides.</p>
@@ -154,5 +170,17 @@
       <span><a href="../">Home</a> &middot; <a href="https://github.com/AlessandroZappatore/TaskbarMonitor/releases">Releases</a> &middot; <a href="https://github.com/AlessandroZappatore/TaskbarMonitor/issues">Report an issue</a></span>
     </div>
   </footer>
+  <script>
+    // Se la pagina e' aperta come file dal disco (file://), i link a cartelle come "faq/" non aprono index.html.
+    // In quel caso aggiunge index.html ai link relativi. Sul sito pubblicato non fa nulla.
+    if (location.protocol === "file:") {
+      document.querySelectorAll("a[href]").forEach(function (a) {
+        var h = a.getAttribute("href");
+        if (/^[a-z][a-z0-9+.-]*:|^\/\/|^#/i.test(h)) return;
+        var i = h.indexOf("#"), path = i < 0 ? h : h.slice(0, i), hash = i < 0 ? "" : h.slice(i);
+        if (path === "" || /\/$/.test(path)) a.setAttribute("href", path + "index.html" + hash);
+      });
+    }
+  </script>
 </body>
 </html>

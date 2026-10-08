@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Taskbar Monitor: network speed, CPU and RAM on your Windows taskbar</title>
-  <meta name="description" content="Taskbar Monitor is a free, open-source Windows overlay that shows live download and upload speed, CPU, RAM, CPU temperature and the track you are playing, right on the taskbar. One 25 KB file, no installer.">
+  <meta name="description" content="Taskbar Monitor is a free, open-source Windows overlay that shows live download and upload speed, CPU, RAM, CPU temperature and the track you are playing, right on the taskbar. One 37 KB file, no installer.">
   <link rel="canonical" href="https://alessandrozappatore.github.io/TaskbarMonitor/">
   <meta name="theme-color" content="#14181c" media="(prefers-color-scheme: dark)">
   <meta name="theme-color" content="#fafaf8" media="(prefers-color-scheme: light)">
@@ -13,7 +13,7 @@
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Taskbar Monitor">
   <meta property="og:title" content="Taskbar Monitor: network speed, CPU and RAM on your Windows taskbar">
-  <meta property="og:description" content="Free, open-source overlay for the Windows taskbar. Live network speed, CPU, RAM, temperature and now playing. One 25 KB file, no installer, no telemetry.">
+  <meta property="og:description" content="Free, open-source overlay for the Windows taskbar. Live network speed, CPU, RAM, temperature and now playing. One 37 KB file, no installer, no telemetry.">
   <meta property="og:url" content="https://alessandrozappatore.github.io/TaskbarMonitor/">
   <meta property="og:image" content="https://alessandrozappatore.github.io/TaskbarMonitor/og-image.png">
   <meta property="og:image:width" content="1200">
@@ -21,7 +21,7 @@
   <meta property="og:image:alt" content="A Windows taskbar showing the now-playing widget on the left and CPU, RAM, temperature and network speed next to the clock.">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Taskbar Monitor: network speed, CPU and RAM on your Windows taskbar">
-  <meta name="twitter:description" content="Free, open-source overlay for the Windows taskbar. One 25 KB file, no installer, no telemetry.">
+  <meta name="twitter:description" content="Free, open-source overlay for the Windows taskbar. One 37 KB file, no installer, no telemetry.">
   <meta name="twitter:image" content="https://alessandrozappatore.github.io/TaskbarMonitor/og-image.png">
 
   <link rel="stylesheet" href="style.css">
@@ -61,7 +61,7 @@
   <main>
     <div class="wrap hero">
       <h1>Network speed, CPU, RAM and music on your Windows taskbar</h1>
-      <p class="lead">Taskbar Monitor is a small overlay that sits on the taskbar and shows what your PC is doing right now. One 25&nbsp;KB file, no installer, nothing sent anywhere.</p>
+      <p class="lead">Taskbar Monitor is a small overlay that sits on the taskbar and shows what your PC is doing right now. One 37&nbsp;KB file, no installer, nothing sent anywhere.</p>
       <div class="actions">
         <a class="btn primary" id="download" href="https://github.com/AlessandroZappatore/TaskbarMonitor/releases/latest/download/TaskbarMonitor.exe">Download for Windows</a>
         <a class="btn" href="https://github.com/AlessandroZappatore/TaskbarMonitor">View source on GitHub</a>
@@ -69,15 +69,15 @@
       <p class="meta">Free and open source (MIT) &middot; Windows 10 and 11, 64-bit &middot; <span id="version">latest release</span></p>
 
       <figure class="shot">
-        <img src="taskbar.png" width="1263" height="72" alt="A Windows 11 taskbar. On the left, a widget with the cover, title and artist of the playing song. Next to the clock, CPU 32%, 77 degrees, RAM 57%, download 2.3 KB/s and upload 845 B/s.">
+        <img src="taskbar.png" width="1309" height="72" alt="A Windows 11 taskbar. On the left, a widget with the cover, title and artist of the playing song. Next to the clock, the stats widget shows CPU 11%, temperature 46 degrees, RAM 68%, GPU 3%, download 346 B/s and upload 316 B/s.">
         <figcaption>Both widgets on a Windows 11 taskbar. The middle of the taskbar is omitted.</figcaption>
       </figure>
     </div>
 
     <div class="wrap">
       <dl class="facts" aria-label="Key facts">
-        <div><dt>25 KB</dt><dd>single executable</dd></div>
-        <div><dt>~50 MB</dt><dd>of RAM in use</dd></div>
+        <div><dt>37 KB</dt><dd>single executable</dd></div>
+        <div><dt>~60 MB</dt><dd>of RAM in use</dd></div>
         <div><dt>0</dt><dd>network connections made</dd></div>
         <div><dt>MIT</dt><dd>license, free to use</dd></div>
       </dl>
@@ -90,19 +90,49 @@
         <div class="two">
           <div>
             <h3>System stats</h3>
-            <p>Next to the notification area: download and upload speed, CPU load and temperature, and RAM usage. Values go from green to yellow to red as load or temperature rise.</p>
+            <p>Next to the notification area: up to six values that you choose, such as download and upload speed, CPU load and temperature, or RAM usage. Values go from green to yellow to red as load or temperature rise.</p>
             <figure class="shot">
-              <img src="screenshot-stats.png" width="337" height="63" alt="Widget showing CPU 8%, 49 degrees, RAM 62%, download 264 B/s, upload 220 B/s." loading="lazy">
+              <img src="screenshot-stats.png" width="334" height="60" alt="Widget showing CPU 11%, temperature 46 degrees, RAM 68%, GPU 3%, download 346 B/s and upload 316 B/s." loading="lazy">
             </figure>
           </div>
           <div>
             <h3>Now playing</h3>
             <p>At the left of the taskbar: cover art, title and artist of whatever is playing in Spotify, a browser tab, VLC and other media apps. Click it to play or pause. It disappears when nothing is playing.</p>
             <figure class="shot">
-              <img src="screenshot-media.png" width="462" height="66" alt="Widget showing the cover, title and artist of the current song." loading="lazy">
+              <img src="screenshot-media.png" width="450" height="60" alt="Widget showing the cover, title and artist of the current song." loading="lazy">
             </figure>
           </div>
         </div>
+
+        <h3 id="choose" style="margin-top:2.5rem">Choose what to show</h3>
+        <p>Open <em>Settings</em> from the right-click menu. The stats widget has six positions, in three columns of two. Pick a value for each one or leave it empty, and the widget updates right away. A column with two empty positions disappears, so the widget only takes the space it needs. Labels and units change with the value you pick.</p>
+        <div class="two">
+          <figure class="shot bare">
+            <img src="screenshot-settings.png" width="713" height="338" alt="The Settings window with six drop-down lists arranged in three columns of two: CPU usage, RAM usage, CPU temperature, GPU usage, download speed and upload speed." loading="lazy">
+            <figcaption>The Settings window: one drop-down per position.</figcaption>
+          </figure>
+          <figure class="shot bare">
+            <img src="screenshot-settings-options.png" width="713" height="620" alt="A drop-down list open in the Settings window, showing every available value: download speed, upload speed, CPU usage, CPU temperature, RAM usage, RAM used, disk activity, disk read speed, disk write speed, disk free space, GPU usage, battery and PC uptime." loading="lazy">
+            <figcaption>Every value you can pick, or leave the position empty.</figcaption>
+          </figure>
+        </div>
+        <figure class="shot" style="margin:2rem 0 1.5rem">
+          <img src="screenshot-stats-disk.png" width="401" height="60" alt="Widget showing disk activity 0%, free space 130 GB, read speed 0 B/s, write speed 144 KB/s, battery 100% and uptime 7 hours 2 minutes." loading="lazy">
+          <figcaption>Another setup: disk activity, free space, read and write speed, battery and uptime.</figcaption>
+        </figure>
+        <table>
+          <thead><tr><th scope="col">Value</th><th scope="col">Shown as</th></tr></thead>
+          <tbody>
+            <tr><td>Download and upload speed</td><td><code>&darr; 264 B/s</code> &nbsp; <code>&uarr; 1.2 MB/s</code></td></tr>
+            <tr><td>CPU usage and temperature</td><td><code>CPU 12%</code> &nbsp; <code>TEMP 53&deg;C</code></td></tr>
+            <tr><td>RAM, as a percentage or in GB</td><td><code>RAM 65%</code> &nbsp; <code>RAM 10.6 GB</code></td></tr>
+            <tr><td>Disk activity, read and write speed, free space</td><td><code>DISK 3%</code> &nbsp; <code>READ 44 KB/s</code> &nbsp; <code>FREE 131 GB</code></td></tr>
+            <tr><td>GPU usage</td><td><code>GPU 7%</code></td></tr>
+            <tr><td>Battery</td><td><code>BAT 85%</code></td></tr>
+            <tr><td>PC uptime</td><td><code>UP 6:45 h</code></td></tr>
+          </tbody>
+        </table>
+        <p class="small muted">Only the values you select are measured. The default is CPU, RAM, temperature, download and upload.</p>
 
         <h3 style="margin-top:2.5rem">Details</h3>
         <ul class="plain">
@@ -124,7 +154,7 @@
           <li>Double-click it. The widgets appear on the taskbar. Right-click either one to open the menu, where you can turn on <em>Start with Windows</em>.</li>
         </ol>
         <div class="note">
-          <p><strong>SmartScreen warning.</strong> The executable is not code-signed, so Windows may say &ldquo;Windows protected your PC&rdquo;. Click <em>More info</em>, then <em>Run anyway</em>. If you prefer not to run a downloaded file, the whole program is one readable source file and builds with the compiler that ships with Windows. See <a href="#source">build from source</a>.</p>
+          <p><strong>SmartScreen warning.</strong> The executable is not code-signed, so Windows may say &ldquo;Windows protected your PC&rdquo;. Click <em>More info</em>, then <em>Run anyway</em>. If you prefer not to run a downloaded file, the whole program is a few small, readable source files and builds with the compiler that ships with Windows. See <a href="#source">build from source</a>.</p>
         </div>
         <p>To remove it, turn off <em>Start with Windows</em>, choose <em>Exit</em> and delete the file. Nothing else is installed.</p>
       </div>
@@ -139,6 +169,8 @@
             <tr><td>Network speed</td><td>Byte counters of all active network adapters, sampled every second.</td></tr>
             <tr><td>CPU and RAM</td><td>The same Windows counters Task Manager is built on.</td></tr>
             <tr><td>Temperature</td><td>The thermal zone reported by the system (ACPI). It is not a per-core reading, so it can differ from tools such as HWiNFO. If your PC does not expose it, the widget shows <code>--</code>.</td></tr>
+            <tr><td>Disk and GPU</td><td>Windows performance counters. GPU usage takes the busiest engine type, the way Task Manager does, and shows <code>--</code> if Windows does not expose it on your PC.</td></tr>
+            <tr><td>Battery and uptime</td><td>Windows power status and the system tick counter.</td></tr>
             <tr><td>Now playing</td><td>Windows media controls, the same ones used by the keyboard media keys and the volume flyout.</td></tr>
           </tbody>
         </table>
@@ -178,6 +210,18 @@ build.bat</code></pre>
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (j) { if (j && j.tag_name) document.getElementById("version").textContent = "version " + j.tag_name.replace(/^v/, ""); })
       .catch(function () {});
+  </script>
+  <script>
+    // Se la pagina e' aperta come file dal disco (file://), i link a cartelle come "faq/" non aprono index.html.
+    // In quel caso aggiunge index.html ai link relativi. Sul sito pubblicato non fa nulla.
+    if (location.protocol === "file:") {
+      document.querySelectorAll("a[href]").forEach(function (a) {
+        var h = a.getAttribute("href");
+        if (/^[a-z][a-z0-9+.-]*:|^\/\/|^#/i.test(h)) return;
+        var i = h.indexOf("#"), path = i < 0 ? h : h.slice(0, i), hash = i < 0 ? "" : h.slice(i);
+        if (path === "" || /\/$/.test(path)) a.setAttribute("href", path + "index.html" + hash);
+      });
+    }
   </script>
 </body>
 </html>
