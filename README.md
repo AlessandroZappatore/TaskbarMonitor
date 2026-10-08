@@ -71,7 +71,7 @@ This produces `TaskbarMonitor.exe` in the repository folder.
 - **CPU / RAM**: `GetSystemTimes` and `GlobalMemoryStatusEx` (Win32).
 - **CPU temperature**: the *Thermal Zone Information* performance counter (ACPI thermal zones). This is the temperature reported by the system, **not** a per-core reading, so it can differ from tools like HWiNFO or HWMonitor. If your machine does not expose a thermal zone, the value is shown as `--`.
 - **Now playing**: the Windows *System Media Transport Controls* (the same API behind the media flyout and keyboard media keys), so any app that integrates with it works.
-- **Overlay**: a borderless, always-on-top, non-activating window placed over the taskbar. Windows 11 no longer supports third-party taskbar toolbars, so an overlay is the most reliable approach.
+- **Overlay**: a borderless, non-activating window attached to the taskbar as a child window. Windows 11 no longer supports third-party taskbar toolbars, so an overlay is the most reliable approach. Being a child of the taskbar, it stays visible when the Start menu or other flyouts open, without any z-order polling (no flicker). If Explorer restarts, the overlay re-attaches automatically.
 
 ## Privacy
 

@@ -17,6 +17,8 @@ class TaskbarMonitor : Form
     [DllImport("user32.dll")]
     static extern bool SetWindowPos(IntPtr h, IntPtr after, int x, int y, int cx, int cy, uint flags);
     [DllImport("user32.dll")] static extern bool SetProcessDPIAware();
+    [DllImport("user32.dll")] static extern bool SetProcessDpiAwarenessContext(IntPtr ctx);
+    [DllImport("user32.dll")] static extern uint GetDpiForSystem();
     public static float S = 1f;
     public static int P(int v) { return (int)Math.Round(v * S); }
     static readonly IntPtr HWND_TOPMOST = new IntPtr(-1);
@@ -33,6 +35,7 @@ class TaskbarMonitor : Form
     Point dragStart;
     Font font = new Font("Segoe UI", 9f, FontStyle.Regular);
     NowPlayingBar media;
+    Point pos;
 
     [STAThread]
     // porta avvio automatico e posizione dalla vecchia versione "InternetSpeedMeter"
@@ -66,8 +69,8 @@ class TaskbarMonitor : Form
         {
             if (!created) return;
             Migrate();
-            SetProcessDPIAware();
-            using (var g = Graphics.FromHwnd(IntPtr.Zero)) S = g.DpiX / 96f;
+            if (!SetProcessDpiAwarenessContext(new IntPtr(-4))) SetProcessDPIAware();
+            try { S = GetDpiForSystem() / 96f; } catch { S = 1f; }
             Application.EnableVisualStyles();
             Application.Run(new TaskbarMonitor());
         }
@@ -78,7 +81,6 @@ class TaskbarMonitor : Form
         FormBorderStyle = FormBorderStyle.None;
         ShowInTaskbar = false;
         StartPosition = FormStartPosition.Manual;
-        TopMost = true;
         DoubleBuffered = true;
         Size = new Size(P(224), P(40));
         InitStats();
@@ -102,12 +104,13 @@ class TaskbarMonitor : Form
         tray.ContextMenuStrip = menu;
         tray.Visible = true;
 
+        var h0 = Handle; TaskbarHost.Attach(this);
         LoadPosition();
         media = new NowPlayingBar();
         media.Enabled2 = MediaEnabled();
 
         MouseDown += (s, e) => { if (e.Button == MouseButtons.Left) { dragging = true; dragStart = e.Location; } };
-        MouseMove += (s, e) => { if (dragging) Location = new Point(Left + e.X - dragStart.X, Top + e.Y - dragStart.Y); };
+        MouseMove += (s, e) => { if (dragging) SetPos(Cursor.Position.X - dragStart.X, Cursor.Position.Y - dragStart.Y); };
         MouseUp += (s, e) => { if (dragging) { dragging = false; SavePosition(); } };
 
         timer.Interval = 1000;
@@ -128,6 +131,12 @@ class TaskbarMonitor : Form
         }
     }
 
+    void SetPos(int x, int y)
+    {
+        pos = new Point(x, y);
+        TaskbarHost.MoveTo(this, x, y);
+    }
+
     void PlaceDefault()
     {
         var s = Screen.PrimaryScreen;
@@ -136,7 +145,7 @@ class TaskbarMonitor : Form
         int y;
         if (w.Bottom < b.Bottom) y = w.Bottom + (b.Bottom - w.Bottom - Height) / 2; // taskbar in basso
         else y = b.Bottom - Height - P(4);
-        Location = new Point(x, y);
+        SetPos(x, y);
         SavePosition();
     }
 
@@ -147,7 +156,7 @@ class TaskbarMonitor : Form
             if (k != null && k.GetValue("MX") != null)
             {
                 var p = new Point((int)k.GetValue("MX"), (int)k.GetValue("MY"));
-                if (SystemInformation.VirtualScreen.Contains(p)) { Location = p; return; }
+                if (SystemInformation.VirtualScreen.Contains(p)) { SetPos(p.X, p.Y); return; }
             }
         }
         PlaceDefault();
@@ -157,8 +166,8 @@ class TaskbarMonitor : Form
     {
         using (var k = Registry.CurrentUser.CreateSubKey(SettingsKey))
         {
-            k.SetValue("MX", Left);
-            k.SetValue("MY", Top);
+            k.SetValue("MX", pos.X);
+            k.SetValue("MY", pos.Y);
         }
     }
 
@@ -226,7 +235,7 @@ class TaskbarMonitor : Form
         }
         lastRx = rx; lastTx = tx;
 
-        SetWindowPos(Handle, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
+        TaskbarHost.Ensure(this, pos);
         ReadStats();
         tray.Text = "↓ " + Fmt(down) + "  ↑ " + Fmt(up);
         Invalidate();
@@ -352,6 +361,7 @@ class NowPlayingBar : Form
     string title = "", artist = "", coverKey = "";
     Image cover;
     bool playing, busy, enabled;
+    Point screenPos;
     GlobalSystemMediaTransportControlsSessionManager mgr;
     GlobalSystemMediaTransportControlsSession session;
 
@@ -366,15 +376,16 @@ class NowPlayingBar : Form
         FormBorderStyle = FormBorderStyle.None;
         ShowInTaskbar = false;
         StartPosition = FormStartPosition.Manual;
-        TopMost = true;
         DoubleBuffered = true;
         Size = new Size(TaskbarMonitor.P(300), TaskbarMonitor.P(40));
         var s = Screen.PrimaryScreen;
         Rectangle b = s.Bounds, w = s.WorkingArea;
         int y = w.Bottom < b.Bottom ? w.Bottom + (b.Bottom - w.Bottom - Height) / 2 : b.Bottom - Height - TaskbarMonitor.P(4);
-        Location = new Point(b.Left + TaskbarMonitor.P(8), y);
+        screenPos = new Point(b.Left + TaskbarMonitor.P(8), y);
         Cursor = Cursors.Hand;
         var forceHandle = Handle; // serve per BeginInvoke dal thread di polling
+        TaskbarHost.Attach(this);
+        TaskbarHost.MoveTo(this, screenPos.X, screenPos.Y);
         MouseClick += (o, e) =>
         {
             var se = session;
@@ -448,7 +459,7 @@ class NowPlayingBar : Form
                 if (t != title || a != artist || pl != playing) { title = t; artist = a; playing = pl; Invalidate(); }
                 if (string.IsNullOrEmpty(t) || !enabled) { Hide(); return; }
                 if (!Visible) Show();
-                SetWindowPos(Handle, new IntPtr(-1), 0, 0, 0, 0, 1 | 2 | 0x10 | 0x40);
+                TaskbarHost.Ensure(this, screenPos);
             }));
         }
         catch { }
@@ -483,5 +494,70 @@ class NowPlayingBar : Form
             e.Graphics.DrawString((playing ? "\u266A " : "\u23F8 ") + title, f1, b1, new RectangleF(x, 0, Width - x - TaskbarMonitor.P(4), Height / 2f), sf);
             e.Graphics.DrawString(artist, f2, b2, new RectangleF(x, Height / 2f, Width - x - TaskbarMonitor.P(4), Height / 2f), sf);
         }
+    }
+}
+
+// Aggancia una finestra alla taskbar come figlia: resta visibile anche quando si apre Start
+// (che sta su un livello superiore ai normali "sempre in primo piano") senza dover
+// ripristinare lo z-order di continuo.
+static class TaskbarHost
+{
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern IntPtr FindWindow(string cls, string title);
+    [DllImport("user32.dll")] static extern IntPtr SetParent(IntPtr child, IntPtr parent);
+    [DllImport("user32.dll")] static extern IntPtr GetParent(IntPtr h);
+    [DllImport("user32.dll")] static extern IntPtr GetWindow(IntPtr h, uint cmd);
+    [DllImport("user32.dll")] static extern bool IsWindow(IntPtr h);
+    [DllImport("user32.dll")] static extern bool ScreenToClient(IntPtr h, ref Point p);
+    [DllImport("user32.dll")] static extern bool GetWindowRect(IntPtr h, out RECT r);
+    [DllImport("user32.dll")] static extern bool SetWindowPos(IntPtr h, IntPtr after, int x, int y, int cx, int cy, uint flags);
+    [DllImport("user32.dll", EntryPoint = "GetWindowLongPtr")] static extern IntPtr GetLongPtr(IntPtr h, int i);
+    [DllImport("user32.dll", EntryPoint = "SetWindowLongPtr")] static extern IntPtr SetLongPtr(IntPtr h, int i, IntPtr v);
+    [StructLayout(LayoutKind.Sequential)] struct RECT { public int L, T, R, B; }
+
+    const int GWL_STYLE = -16;
+    const long WS_POPUP = 0x80000000L, WS_CHILD = 0x40000000L;
+    const uint SWP_NOSIZE = 1, SWP_NOMOVE = 2, SWP_NOACTIVATE = 0x10, GW_HWNDPREV = 3;
+
+    static IntPtr Taskbar { get { return FindWindow("Shell_TrayWnd", null); } }
+
+    public static bool Attach(Form f)
+    {
+        IntPtr tb = Taskbar, h = f.Handle;
+        if (tb == IntPtr.Zero) return false;
+        long style = GetLongPtr(h, GWL_STYLE).ToInt64();
+        style = (style & ~WS_POPUP) | WS_CHILD;
+        SetLongPtr(h, GWL_STYLE, new IntPtr(style));
+        SetParent(h, tb);
+        return GetParent(h) == tb;
+    }
+
+    // posizione in coordinate schermo (indipendente dal fatto che la finestra sia figlia)
+    public static void MoveTo(Form f, int x, int y)
+    {
+        var p = new Point(x, y);
+        IntPtr parent = GetParent(f.Handle);
+        if (parent != IntPtr.Zero) ScreenToClient(parent, ref p);
+        SetWindowPos(f.Handle, IntPtr.Zero, p.X, p.Y, 0, 0, SWP_NOSIZE | SWP_NOACTIVATE);
+    }
+
+    public static Point ScreenPos(Form f)
+    {
+        RECT r; GetWindowRect(f.Handle, out r);
+        return new Point(r.L, r.T);
+    }
+
+    // Da chiamare ogni tanto: riaggancia se Explorer e' stato riavviato e riporta la finestra
+    // in cima ai fratelli solo se qualcun altro le sta sopra (nessuna operazione, quindi nessun flicker, altrimenti).
+    public static void Ensure(Form f, Point screenPos)
+    {
+        IntPtr h = f.Handle, tb = Taskbar;
+        if (tb == IntPtr.Zero) return;
+        if (GetParent(h) != tb)
+        {
+            if (Attach(f)) MoveTo(f, screenPos.X, screenPos.Y);
+            return;
+        }
+        if (GetWindow(h, GW_HWNDPREV) != IntPtr.Zero)
+            SetWindowPos(h, IntPtr.Zero, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
     }
 }
