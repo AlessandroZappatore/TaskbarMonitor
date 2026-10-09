@@ -93,6 +93,15 @@ Choose **Hide widgets** in the menu to hide both overlays. Taskbar Monitor keeps
 A balloon reminds you how to restore them when you hide. If you hide the widgets and restart Windows, they stay hidden when started automatically; launching the app manually always shows them.
 
 
+### Command-line options
+
+| Option | Effect |
+| --- | --- |
+| `--autostart` | Used by the *Start with Windows* entry. If you hid the widgets, they stay hidden at startup. Without it, the widgets always appear. |
+| `--settings` | Opens the Settings window right after the app starts. |
+
+Starting `TaskbarMonitor.exe` again while it is already running does not open a second copy: it shows the widgets if they were hidden.
+
 ## Requirements
 
 - Windows 10 (version 1809 or newer) or Windows 11, 64-bit
@@ -143,7 +152,7 @@ Taskbar Monitor does not connect to the internet, collects nothing, and sends no
 
 ## Contributing
 
-Issues and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
+Issues and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md). Release notes are in the [changelog](CHANGELOG.md).
 
 ## License
 
