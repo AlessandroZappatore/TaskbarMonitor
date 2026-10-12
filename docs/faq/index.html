@@ -47,7 +47,7 @@
           {
             "@type": "Question",
             "name": "Why is the temperature different from HWiNFO or other tools?",
-            "acceptedAnswer": { "@type": "Answer", "text": "Taskbar Monitor shows the thermal zone temperature that Windows reports through ACPI. It is a system-level value, not a per-core reading. Exact per-core temperatures need a kernel driver and administrator rights, which this app avoids on purpose. If your PC does not expose a thermal zone, the widget shows two dashes." }
+            "acceptedAnswer": { "@type": "Answer", "text": "Taskbar Monitor shows the thermal zone temperature that Windows reports through ACPI. It is a system-level value, not a per-core reading, and on many laptops it swings by tens of degrees from one second to the next because of CPU boost bursts, so the widget shows the average of the last 5 seconds. Exact per-core temperatures need a kernel driver and administrator rights, which this app avoids on purpose. If your PC does not expose a thermal zone, the widget shows two dashes." }
           },
           {
             "@type": "Question",
@@ -126,7 +126,7 @@
       <p>No. It makes no network connections, has no telemetry and no accounts. It only reads local counters and stores its settings in the registry under <code>HKEY_CURRENT_USER\Software\TaskbarMonitor</code>.</p>
 
       <h2 id="temperature">Why is the temperature different from HWiNFO or other tools?</h2>
-      <p>Taskbar Monitor shows the thermal zone temperature that Windows reports through ACPI. It is a system-level value, not a per-core reading. Exact per-core temperatures need a kernel driver and administrator rights, which this app avoids on purpose. If your PC does not expose a thermal zone, the widget shows two dashes.</p>
+      <p>Taskbar Monitor shows the thermal zone temperature that Windows reports through ACPI. It is a system-level value, not a per-core reading. On many laptops it swings by tens of degrees from one second to the next because of CPU boost bursts, so the widget shows the average of the last 5 seconds instead of the instantaneous sample. Exact per-core temperatures need a kernel driver and administrator rights, which this app avoids on purpose. If your PC does not expose a thermal zone, the widget shows two dashes.</p>
 
       <h2 id="hide">How do I hide the widgets and bring them back?</h2>
       <p>Right-click a widget and choose <em>Hide widgets</em>. To show them again, use any of these:</p>

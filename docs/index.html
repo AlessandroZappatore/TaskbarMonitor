@@ -168,7 +168,7 @@
           <tbody>
             <tr><td>Network speed</td><td>Byte counters of all active network adapters, sampled every second.</td></tr>
             <tr><td>CPU and RAM</td><td>The same Windows counters Task Manager is built on.</td></tr>
-            <tr><td>Temperature</td><td>The thermal zone reported by the system (ACPI). It is not a per-core reading, so it can differ from tools such as HWiNFO. If your PC does not expose it, the widget shows <code>--</code>.</td></tr>
+            <tr><td>Temperature</td><td>The thermal zone reported by the system (ACPI), averaged over the last 5 seconds because the raw sensor can jump by tens of degrees from one second to the next. It is not a per-core reading, so it can differ from tools such as HWiNFO. If your PC does not expose it, the widget shows <code>--</code>.</td></tr>
             <tr><td>Disk and GPU</td><td>Windows performance counters. GPU usage takes the busiest engine type, the way Task Manager does, and shows <code>--</code> if Windows does not expose it on your PC.</td></tr>
             <tr><td>Battery and uptime</td><td>Windows power status and the system tick counter.</td></tr>
             <tr><td>Now playing</td><td>Windows media controls, the same ones used by the keyboard media keys and the volume flyout.</td></tr>

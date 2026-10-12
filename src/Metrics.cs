@@ -113,6 +113,8 @@ class Sampler : IDisposable
     HashSet<Metric> wanted = new HashSet<Metric>();
 
     PerformanceCounter[] thermal;
+    const int TempWindow = 5; // secondi su cui si fa la media della temperatura
+    Queue<double> tempWin = new Queue<double>();
     PerformanceCounter diskIdle, diskReadC, diskWriteC;
     PerformanceCounterCategory gpuCat;
     Dictionary<string, CounterSample> gpuPrev = new Dictionary<string, CounterSample>();
@@ -140,7 +142,7 @@ class Sampler : IDisposable
                 catch { thermal = new PerformanceCounter[0]; }
             }
         }
-        else if (thermal != null) { foreach (var c in thermal) c.Dispose(); thermal = null; temp = double.NaN; }
+        else if (thermal != null) { foreach (var c in thermal) c.Dispose(); thermal = null; temp = double.NaN; tempWin.Clear(); }
 
         bool needDisk = wanted.Contains(Metric.Disk) || wanted.Contains(Metric.DiskRead) || wanted.Contains(Metric.DiskWrite);
         if (needDisk)
@@ -188,7 +190,17 @@ class Sampler : IDisposable
             {
                 try { double v = c.NextValue() - 273.15; if (v > 0 && v < 150 && (double.IsNaN(max) || v > max)) max = v; } catch { }
             }
-            temp = max;
+            // Il sensore ACPI di molti portatili oscilla di decine di gradi da un secondo all'altro
+            // (picchi di boost): si mostra la media degli ultimi secondi invece del campione istantaneo.
+            if (double.IsNaN(max)) { tempWin.Clear(); temp = double.NaN; }
+            else
+            {
+                tempWin.Enqueue(max);
+                while (tempWin.Count > TempWindow) tempWin.Dequeue();
+                double sum = 0;
+                foreach (var t in tempWin) sum += t;
+                temp = sum / tempWin.Count;
+            }
         }
 
         if (diskIdle != null)

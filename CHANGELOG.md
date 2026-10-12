@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- CPU temperature is now the average of the last 5 seconds instead of the instantaneous sensor sample, which on many laptops jumps by tens of degrees from one second to the next.
+
 ## 1.2.0
 
 - **Choose what to show.** New *Settings...* window: the stats widget has six positions (3 columns of 2) and each one can show download speed, upload speed, CPU usage, CPU temperature, RAM usage or used GB, disk activity, disk read speed, disk write speed, disk free space, GPU usage, battery or PC uptime. Positions can be left empty, empty columns disappear and the widget gets narrower. Labels and units change with the selected value, and only the selected values are measured.
