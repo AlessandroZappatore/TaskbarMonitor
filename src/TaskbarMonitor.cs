@@ -357,6 +357,10 @@ class TaskbarMonitor : Form
             case Metric.RamUsed: value = "128.0"; unit = "GB"; break;
             case Metric.DiskFree: value = "1023"; unit = "GB"; break;
             case Metric.Uptime: value = "99d 23"; unit = "h"; break;
+            case Metric.CpuPower: value = "99.9"; unit = "W"; break;
+            case Metric.CpuFreq: value = "9.99"; unit = "GHz"; break;
+            case Metric.GpuMem: value = "99.9"; unit = "GB"; break;
+            case Metric.BatteryCycles: value = "9999"; unit = ""; break;
             default: value = "100"; unit = "%"; break;
         }
     }

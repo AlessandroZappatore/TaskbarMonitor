@@ -11,7 +11,7 @@ if not exist "%FW%\csc.exe" (
 
 "%FW%\csc.exe" /nologo /target:winexe /optimize ^
     /out:TaskbarMonitor.exe ^
-    /r:System.dll /r:System.Windows.Forms.dll /r:System.Drawing.dll ^
+    /r:System.dll /r:System.Management.dll /r:System.Windows.Forms.dll /r:System.Drawing.dll ^
     /r:"%FW%\System.Runtime.dll" ^
     /r:"%WINMD%\Windows.Foundation.winmd" ^
     /r:"%WINMD%\Windows.Media.winmd" ^

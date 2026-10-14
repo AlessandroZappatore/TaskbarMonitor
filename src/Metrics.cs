@@ -9,7 +9,11 @@ using System.Windows.Forms;
 using Microsoft.Win32;
 
 // Dati che si possono mostrare nel widget (massimo 6, scelti dall'utente).
-enum Metric { None, Down, Up, Cpu, CpuTemp, Ram, RamUsed, Disk, DiskRead, DiskWrite, DiskFree, Gpu, Battery, Uptime }
+enum Metric
+{
+    None, Down, Up, Cpu, CpuTemp, Ram, RamUsed, Disk, DiskRead, DiskWrite, DiskFree, Gpu, Battery, Uptime,
+    CpuPower, CpuFreq, CpuLimit, Wifi, GpuMem, BatteryCycles
+}
 
 // Un dato pronto da disegnare: etichetta, valore e unita' cambiano in base al tipo di dato.
 struct Reading
@@ -27,7 +31,26 @@ static class Metrics
     public static readonly Metric[] Choices =
     {
         Metric.Down, Metric.Up, Metric.Cpu, Metric.CpuTemp, Metric.Ram, Metric.RamUsed,
-        Metric.Disk, Metric.DiskRead, Metric.DiskWrite, Metric.DiskFree, Metric.Gpu, Metric.Battery, Metric.Uptime
+        Metric.Disk, Metric.DiskRead, Metric.DiskWrite, Metric.DiskFree, Metric.Gpu, Metric.Battery, Metric.Uptime,
+        Metric.CpuPower, Metric.CpuFreq, Metric.CpuLimit, Metric.Wifi, Metric.GpuMem, Metric.BatteryCycles
+    };
+
+    // Categorie mostrate nella finestra Impostazioni, nell'ordine in cui compaiono.
+    public class Group
+    {
+        public string Title;
+        public Metric[] Items;
+        public Group(string title, params Metric[] items) { Title = title; Items = items; }
+    }
+
+    public static readonly Group[] Groups =
+    {
+        new Group("Network", Metric.Down, Metric.Up, Metric.Wifi),
+        new Group("CPU", Metric.Cpu, Metric.CpuTemp, Metric.CpuPower, Metric.CpuFreq, Metric.CpuLimit),
+        new Group("GPU", Metric.Gpu, Metric.GpuMem),
+        new Group("Memory", Metric.Ram, Metric.RamUsed),
+        new Group("Disk", Metric.Disk, Metric.DiskRead, Metric.DiskWrite, Metric.DiskFree),
+        new Group("Battery and system", Metric.Battery, Metric.BatteryCycles, Metric.Uptime)
     };
 
     public static string Name(Metric m)
@@ -47,6 +70,12 @@ static class Metrics
             case Metric.Gpu: return "GPU usage";
             case Metric.Battery: return "Battery";
             case Metric.Uptime: return "PC uptime";
+            case Metric.CpuPower: return "CPU power (W)";
+            case Metric.CpuFreq: return "CPU frequency";
+            case Metric.CpuLimit: return "CPU thermal limit";
+            case Metric.Wifi: return "Wi-Fi signal";
+            case Metric.GpuMem: return "GPU memory";
+            case Metric.BatteryCycles: return "Battery cycles";
             default: return "(empty)";
         }
     }
@@ -116,6 +145,11 @@ class Sampler : IDisposable
     const int TempWindow = 5; // secondi su cui si fa la media della temperatura
     Queue<double> tempWin = new Queue<double>();
     PerformanceCounter diskIdle, diskReadC, diskWriteC;
+    PerformanceCounter powerCtr, freqCtr, perfCtr;
+    PerformanceCounter[] limitCtr, gpuMemCtr;
+    double powerW = double.NaN, freqGhz = double.NaN, limitPct = double.NaN, gpuMemGb = double.NaN;
+    int wifiQuality = -1, batteryCycles = -1;
+    IntPtr wlanHandle = IntPtr.Zero;
     PerformanceCounterCategory gpuCat;
     Dictionary<string, CounterSample> gpuPrev = new Dictionary<string, CounterSample>();
 
@@ -163,7 +197,70 @@ class Sampler : IDisposable
         }
 
         if (!wanted.Contains(Metric.Gpu)) { gpuPrev.Clear(); gpuOk = false; }
-        tick = 0; // rilegge subito lo spazio libero
+
+        // potenza del pacchetto CPU (Intel RAPL esposto da Windows, in milliwatt)
+        if (wanted.Contains(Metric.CpuPower))
+        {
+            if (powerCtr == null)
+                try { powerCtr = new PerformanceCounter("Energy Meter", "Power", "RAPL_Package0_PKG"); } catch { powerCtr = null; }
+        }
+        else if (powerCtr != null) { powerCtr.Dispose(); powerCtr = null; powerW = double.NaN; }
+
+        // frequenza reale = frequenza base x % prestazioni, come Gestione attivita'
+        if (wanted.Contains(Metric.CpuFreq))
+        {
+            if (freqCtr == null)
+            {
+                try
+                {
+                    freqCtr = new PerformanceCounter("Processor Information", "Processor Frequency", "_Total");
+                    perfCtr = new PerformanceCounter("Processor Information", "% Processor Performance", "_Total");
+                }
+                catch { freqCtr = null; perfCtr = null; }
+            }
+        }
+        else if (freqCtr != null) { freqCtr.Dispose(); perfCtr.Dispose(); freqCtr = null; perfCtr = null; freqGhz = double.NaN; }
+
+        // limite imposto dal calore (100% = nessuna limitazione)
+        if (wanted.Contains(Metric.CpuLimit))
+        {
+            if (limitCtr == null)
+            {
+                try
+                {
+                    var l = new List<PerformanceCounter>();
+                    foreach (var n in new PerformanceCounterCategory("Thermal Zone Information").GetInstanceNames())
+                        l.Add(new PerformanceCounter("Thermal Zone Information", "% Passive Limit", n));
+                    limitCtr = l.ToArray();
+                }
+                catch { limitCtr = new PerformanceCounter[0]; }
+            }
+        }
+        else if (limitCtr != null) { foreach (var c in limitCtr) c.Dispose(); limitCtr = null; limitPct = double.NaN; }
+
+        // memoria GPU usata (dedicata + condivisa, tutte le schede)
+        if (wanted.Contains(Metric.GpuMem))
+        {
+            if (gpuMemCtr == null)
+            {
+                try
+                {
+                    var l = new List<PerformanceCounter>();
+                    foreach (var n in new PerformanceCounterCategory("GPU Adapter Memory").GetInstanceNames())
+                    {
+                        l.Add(new PerformanceCounter("GPU Adapter Memory", "Dedicated Usage", n));
+                        l.Add(new PerformanceCounter("GPU Adapter Memory", "Shared Usage", n));
+                    }
+                    gpuMemCtr = l.ToArray();
+                }
+                catch { gpuMemCtr = new PerformanceCounter[0]; }
+            }
+        }
+        else if (gpuMemCtr != null) { foreach (var c in gpuMemCtr) c.Dispose(); gpuMemCtr = null; gpuMemGb = double.NaN; }
+
+        if (!wanted.Contains(Metric.Wifi)) { CloseWlan(); wifiQuality = -1; }
+        if (!wanted.Contains(Metric.BatteryCycles)) batteryCycles = -1;
+        tick = 0; // rilegge subito spazio libero e cicli batteria
     }
 
     public void Update()
@@ -216,6 +313,35 @@ class Sampler : IDisposable
 
         if (wanted.Contains(Metric.Gpu)) ReadGpu();
 
+        if (powerCtr != null)
+        {
+            try { powerW = powerCtr.NextValue() / 1000.0; } catch { powerW = double.NaN; }
+        }
+        if (freqCtr != null)
+        {
+            try { freqGhz = freqCtr.NextValue() * perfCtr.NextValue() / 100000.0; } catch { freqGhz = double.NaN; }
+        }
+        if (limitCtr != null)
+        {
+            double min = double.NaN;
+            foreach (var c in limitCtr)
+            {
+                try { double v = c.NextValue(); if (double.IsNaN(min) || v < min) min = v; } catch { }
+            }
+            limitPct = min;
+        }
+        if (gpuMemCtr != null)
+        {
+            double sum = 0; bool ok = false;
+            foreach (var c in gpuMemCtr)
+            {
+                try { sum += c.NextValue(); ok = true; } catch { }
+            }
+            gpuMemGb = ok ? sum / 1073741824.0 : double.NaN;
+        }
+        if (wanted.Contains(Metric.Wifi)) ReadWifi();
+        if (wanted.Contains(Metric.BatteryCycles) && tick % 60 == 0) ReadBatteryCycles();
+
         if (wanted.Contains(Metric.DiskFree) && tick % 10 == 0)
         {
             try
@@ -257,6 +383,76 @@ class Sampler : IDisposable
             gpuOk = true;
         }
         catch { gpuOk = false; }
+    }
+
+    // ---- Wi-Fi: qualita' del segnale (0-100) dalla connessione attiva, via Native Wifi API ----
+    [DllImport("wlanapi.dll")] static extern int WlanOpenHandle(uint version, IntPtr reserved, out uint negotiated, out IntPtr handle);
+    [DllImport("wlanapi.dll")] static extern int WlanCloseHandle(IntPtr handle, IntPtr reserved);
+    [DllImport("wlanapi.dll")] static extern int WlanEnumInterfaces(IntPtr handle, IntPtr reserved, out IntPtr list);
+    [DllImport("wlanapi.dll")] static extern int WlanQueryInterface(IntPtr handle, ref Guid guid, int opcode, IntPtr reserved, out int size, out IntPtr data, IntPtr type);
+    [DllImport("wlanapi.dll")] static extern void WlanFreeMemory(IntPtr p);
+
+    const int WlanOpcodeCurrentConnection = 7;
+    const int WlanInterfaceStateConnected = 1;
+    const int WlanInterfaceEntrySize = 532;   // GUID (16) + descrizione (512) + stato (4)
+    const int WlanSignalQualityOffset = 576;  // WLAN_CONNECTION_ATTRIBUTES.wlanAssociationAttributes.wlanSignalQuality
+
+    void ReadWifi()
+    {
+        int quality = -1;
+        try
+        {
+            if (wlanHandle == IntPtr.Zero)
+            {
+                uint negotiated;
+                if (WlanOpenHandle(2, IntPtr.Zero, out negotiated, out wlanHandle) != 0) { wlanHandle = IntPtr.Zero; wifiQuality = -1; return; }
+            }
+            IntPtr list;
+            if (WlanEnumInterfaces(wlanHandle, IntPtr.Zero, out list) == 0)
+            {
+                int count = Marshal.ReadInt32(list, 0);
+                for (int i = 0; i < count && quality < 0; i++)
+                {
+                    IntPtr entry = IntPtr.Add(list, 8 + i * WlanInterfaceEntrySize);
+                    if (Marshal.ReadInt32(entry, 16 + 512) != WlanInterfaceStateConnected) continue;
+                    var gb = new byte[16];
+                    Marshal.Copy(entry, gb, 0, 16);
+                    var guid = new Guid(gb);
+                    int size; IntPtr data;
+                    if (WlanQueryInterface(wlanHandle, ref guid, WlanOpcodeCurrentConnection, IntPtr.Zero, out size, out data, IntPtr.Zero) == 0)
+                    {
+                        if (size > WlanSignalQualityOffset + 4) quality = Marshal.ReadInt32(data, WlanSignalQualityOffset);
+                        WlanFreeMemory(data);
+                    }
+                }
+                WlanFreeMemory(list);
+            }
+        }
+        catch { quality = -1; }
+        wifiQuality = quality;
+    }
+
+    void CloseWlan()
+    {
+        if (wlanHandle != IntPtr.Zero) { try { WlanCloseHandle(wlanHandle, IntPtr.Zero); } catch { } wlanHandle = IntPtr.Zero; }
+    }
+
+    // ---- cicli di carica della batteria (WMI, letti una volta al minuto) ----
+    void ReadBatteryCycles()
+    {
+        int cycles = -1;
+        try
+        {
+            using (var s = new System.Management.ManagementObjectSearcher(@"root\wmi", "SELECT CycleCount FROM BatteryCycleCount"))
+                foreach (System.Management.ManagementObject o in s.Get())
+                {
+                    cycles = Convert.ToInt32(o["CycleCount"]);
+                    o.Dispose();
+                    break;
+                }
+        }
+        catch { cycles = -1; }
+        batteryCycles = cycles;
     }
 
     public static void Split(double bps, out string num, out string unit)
@@ -334,12 +530,49 @@ class Sampler : IDisposable
                         ? Make("UP", ((int)t.TotalDays) + "d " + t.Hours, "h")
                         : Make("UP", t.Hours + ":" + t.Minutes.ToString("00"), "h");
                 }
+            case Metric.CpuPower:
+                {
+                    if (double.IsNaN(powerW)) return Make("PWR", "--", "");
+                    var r = Make("PWR", powerW.ToString(powerW < 10 ? "0.0" : "0"), "W");
+                    r.Level = powerW; r.Lo = 10; r.Hi = 35;
+                    return r;
+                }
+            case Metric.CpuFreq:
+                return double.IsNaN(freqGhz) ? Make("FREQ", "--", "") : Make("FREQ", freqGhz.ToString("0.00"), "GHz");
+            case Metric.CpuLimit:
+                {
+                    if (double.IsNaN(limitPct)) return Make("LIMIT", "--", "");
+                    var r = Make("LIMIT", Math.Min(100, limitPct).ToString("0"), "%");
+                    r.Level = 100 - Math.Min(100, limitPct); r.Lo = 0; r.Hi = 40; // 100% = verde, limitato = rosso
+                    return r;
+                }
+            case Metric.Wifi:
+                {
+                    if (wifiQuality < 0) return Make("WIFI", "--", "");
+                    var r = Make("WIFI", wifiQuality.ToString(), "%");
+                    r.Level = 100 - wifiQuality; r.Lo = 25; r.Hi = 70; // segnale debole = rosso
+                    return r;
+                }
+            case Metric.GpuMem:
+                {
+                    if (double.IsNaN(gpuMemGb)) return Make("VRAM", "--", "");
+                    return gpuMemGb < 1 ? Make("VRAM", (gpuMemGb * 1024).ToString("0"), "MB")
+                                        : Make("VRAM", gpuMemGb.ToString("0.0"), "GB");
+                }
+            case Metric.BatteryCycles:
+                return batteryCycles < 0 ? Make("CYCLES", "--", "") : Make("CYCLES", batteryCycles.ToString(), "");
             default: return Make("", "", "");
         }
     }
 
     public void Dispose()
     {
+        CloseWlan();
+        if (powerCtr != null) powerCtr.Dispose();
+        if (freqCtr != null) freqCtr.Dispose();
+        if (perfCtr != null) perfCtr.Dispose();
+        if (limitCtr != null) foreach (var c in limitCtr) c.Dispose();
+        if (gpuMemCtr != null) foreach (var c in gpuMemCtr) c.Dispose();
         if (thermal != null) foreach (var c in thermal) c.Dispose();
         if (diskIdle != null) diskIdle.Dispose();
         if (diskReadC != null) diskReadC.Dispose();
