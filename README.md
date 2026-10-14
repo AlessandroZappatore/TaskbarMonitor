@@ -4,7 +4,7 @@
 
 A tiny, free and open-source Windows overlay that shows **live network speed, CPU, RAM, CPU temperature and the currently playing track** right on your taskbar.
 
-- Single ~37 KB executable, no installer, no runtime to install
+- Single ~44 KB executable, no installer, no runtime to install
 - Uses ~60 MB of RAM and practically 0% CPU
 - No network access, no telemetry, no accounts
 
@@ -14,13 +14,17 @@ A tiny, free and open-source Windows overlay that shows **live network speed, CP
 | --- | --- |
 | ![Stats overlay](docs/screenshot-stats.png) | ![Stats overlay showing disk values](docs/screenshot-stats-disk.png) |
 
+A third setup showing CPU power, frequency, thermal limit, Wi-Fi signal, GPU memory and battery cycles:
+
+![Stats overlay showing power, frequency, thermal limit, Wi-Fi, GPU memory and battery cycles](docs/screenshot-stats-power.png)
+
 ![Now playing overlay](docs/screenshot-media.png)
 
 ## Features
 
 | Overlay | What it shows |
 | --- | --- |
-| **Stats** (bottom right, next to the system tray) | Up to 6 values that **you choose**: network speed, CPU, temperature, RAM, disk, GPU, battery, uptime (see [Choosing what to show](#choosing-what-to-show)) |
+| **Stats** (bottom right, next to the system tray) | Up to 6 values that **you choose**: network speed, CPU usage, temperature, power and frequency, RAM, disk, GPU, Wi-Fi, battery, uptime (see [Choosing what to show](#choosing-what-to-show)) |
 | **Now playing** (bottom left) | Cover art, title and artist of whatever is playing (Spotify, YouTube in the browser, VLC, ...). Click it to play/pause |
 
 - Fixed-position columns: values never jump around when they change.
@@ -62,22 +66,28 @@ If you move the `.exe` to another folder after enabling *Start with Windows*, to
 
 Open **Settings...** from the menu. The stats widget has **6 positions**, laid out in 3 columns of 2. Pick any value for each position, or leave it empty. Changes apply immediately.
 
-| Settings window | Every available value |
+| Settings window | Every available value, grouped by category |
 | --- | --- |
 | ![Settings window](docs/screenshot-settings.png) | ![Settings drop-down list](docs/screenshot-settings-options.png) |
  A column with two empty positions disappears and the widget gets narrower, so it never takes more space than it needs. Labels and units change with the value you pick.
 
-| Value | Shown as |
-| --- | --- |
-| Download / upload speed | `↓ 264 B/s`, `↑ 1.2 MB/s` |
-| CPU usage | `CPU 12%` |
-| CPU temperature | `TEMP 53°C` |
-| RAM usage / RAM used | `RAM 65%` / `RAM 10.6 GB` |
-| Disk activity, read speed, write speed | `DISK 3%`, `READ 44.0 KB/s`, `WRITE 128.1 KB/s` |
-| Disk free space (system drive) | `FREE 131 GB` |
-| GPU usage | `GPU 7%` |
-| Battery | `BAT 85%` (green when plugged in, red when low) |
-| PC uptime | `UP 6:45 h` or `UP 3d 4 h` |
+| Category | Value | Shown as |
+| --- | --- | --- |
+| **Network** | Download / upload speed | `↓ 264 B/s`, `↑ 1.2 MB/s` |
+| | Wi-Fi signal | `WIFI 94%` (weak signal turns red) |
+| **CPU** | CPU usage | `CPU 12%` |
+| | CPU temperature | `TEMP 53°C` |
+| | CPU power (package, RAPL) | `PWR 2.7 W` |
+| | CPU frequency | `FREQ 1.55 GHz` |
+| | CPU thermal limit | `LIMIT 100%` (100% = not limited; lower values turn red) |
+| **GPU** | GPU usage | `GPU 7%` |
+| | GPU memory in use | `VRAM 932 MB` or `VRAM 1.4 GB` |
+| **Memory** | RAM usage / RAM used | `RAM 65%` / `RAM 10.6 GB` |
+| **Disk** | Disk activity, read speed, write speed | `DISK 3%`, `READ 44.0 KB/s`, `WRITE 128.1 KB/s` |
+| | Disk free space (system drive) | `FREE 131 GB` |
+| **Battery and system** | Battery | `BAT 85%` (green when plugged in, red when low) |
+| | Battery charge cycles | `CYCLES 585` |
+| | PC uptime | `UP 6:45 h` or `UP 3d 4 h` |
 
 Each value can appear only once: choosing one that is already used swaps the two positions. Percentages, temperature and battery change color from green to yellow to red. Only the values you select are measured, so the others cost nothing. The default is CPU, RAM, temperature, download and upload.
 
@@ -126,6 +136,12 @@ This produces `TaskbarMonitor.exe` in the repository folder.
 - **Disk**: the *PhysicalDisk* performance counters (activity, read and write bytes per second) and free space of the system drive.
 - **GPU**: the *GPU Engine* performance counters, taking the busiest engine type like Task Manager does. Shown as `--` if Windows does not expose them.
 - **Battery / uptime**: Windows power status and `GetTickCount64`.
+- **CPU power**: the *Energy Meter* performance counters (Intel RAPL, package power in milliwatts). Available on Intel CPUs whose platform exposes RAPL to Windows; shown as `--` otherwise.
+- **CPU frequency**: base frequency times `% Processor Performance`, the way Task Manager computes the current speed.
+- **CPU thermal limit**: the `% Passive Limit` counter of the thermal zone (100% means the CPU is not being limited because of heat).
+- **Wi-Fi signal**: the signal quality of the active connection from the Native Wifi API (the same percentage `netsh wlan show interfaces` reports). `--` on a wired connection.
+- **GPU memory**: the *GPU Adapter Memory* counters, dedicated plus shared usage of all adapters.
+- **Battery cycles**: the `BatteryCycleCount` WMI class, read once a minute. `--` if the battery does not report it.
 - **CPU temperature**: the *Thermal Zone Information* performance counter (ACPI thermal zones). This is the temperature reported by the system, **not** a per-core reading, so it can differ from tools like HWiNFO or HWMonitor. On many laptops this sensor swings by tens of degrees from one second to the next (CPU boost bursts), so the widget shows the **average of the last 5 seconds** instead of the instantaneous sample. If your machine does not expose a thermal zone, the value is shown as `--`.
 - **Now playing**: the Windows *System Media Transport Controls* (the same API behind the media flyout and keyboard media keys), so any app that integrates with it works.
 - **Overlay**: a borderless, non-activating, always-on-top window owned by the taskbar window. Windows 11 no longer supports third-party taskbar toolbars, so an overlay is the most reliable approach. Because Windows always keeps an owned window above its owner, the overlay rises together with the taskbar when the Start menu or other flyouts open, without polling the z-order (no flicker). If Explorer restarts, the overlay re-attaches automatically.

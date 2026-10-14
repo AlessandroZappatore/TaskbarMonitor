@@ -57,12 +57,12 @@
           {
             "@type": "Question",
             "name": "Can I choose what the widget shows?",
-            "acceptedAnswer": { "@type": "Answer", "text": "Yes. Right-click a widget and choose Settings. The stats widget has six positions in three columns of two. For each one you can pick download speed, upload speed, CPU usage, CPU temperature, RAM usage or used GB, disk activity, disk read or write speed, free space on the system drive, GPU usage, battery or PC uptime, or leave it empty. Changes apply immediately and empty columns disappear, so the widget only takes the space it needs." }
+            "acceptedAnswer": { "@type": "Answer", "text": "Yes. Right-click a widget and choose Settings. The stats widget has six positions in three columns of two. For each one you can pick download speed, upload speed, CPU usage, CPU temperature, RAM usage or used GB, disk activity, disk read or write speed, free space on the system drive, GPU usage, GPU memory, battery, battery cycles, PC uptime, CPU power in watts, CPU frequency, the CPU thermal limit or the Wi-Fi signal, or leave it empty. Changes apply immediately and empty columns disappear, so the widget only takes the space it needs." }
           },
           {
             "@type": "Question",
             "name": "Why does the GPU or temperature show two dashes?",
-            "acceptedAnswer": { "@type": "Answer", "text": "Two dashes mean Windows does not expose that value on your PC through the counters Taskbar Monitor uses. GPU usage relies on the GPU Engine performance counters, which need a recent graphics driver. Temperature relies on an ACPI thermal zone. Battery also shows two dashes on a PC without a battery." }
+            "acceptedAnswer": { "@type": "Answer", "text": "Two dashes mean Windows does not expose that value on your PC through the counters Taskbar Monitor uses. GPU usage relies on the GPU Engine performance counters, which need a recent graphics driver. Temperature and thermal limit rely on an ACPI thermal zone. CPU power relies on the Intel RAPL counters, which only some platforms expose. Battery and battery cycles show two dashes on a PC without a battery, and the Wi-Fi signal shows two dashes on a wired connection." }
           },
           {
             "@type": "Question",
@@ -139,10 +139,10 @@
       <p>The tray icon may be inside the <code>^</code> menu next to the clock. Drag it onto the taskbar to keep it always visible.</p>
 
       <h2 id="choose">Can I choose what the widget shows?</h2>
-      <p>Yes. Right-click a widget and choose <em>Settings</em>. The stats widget has six positions in three columns of two. For each one you can pick download speed, upload speed, CPU usage, CPU temperature, RAM usage or used GB, disk activity, disk read or write speed, free space on the system drive, GPU usage, battery or PC uptime, or leave it empty. Changes apply immediately and empty columns disappear, so the widget only takes the space it needs.</p>
+      <p>Yes. Right-click a widget and choose <em>Settings</em>. The stats widget has six positions in three columns of two. For each one you can pick download speed, upload speed, CPU usage, CPU temperature, RAM usage or used GB, disk activity, disk read or write speed, free space on the system drive, GPU usage, GPU memory, battery, battery cycles, PC uptime, CPU power in watts, CPU frequency, the CPU thermal limit or the Wi-Fi signal, or leave it empty. Changes apply immediately and empty columns disappear, so the widget only takes the space it needs.</p>
 
       <h2 id="dashes">Why does the GPU or temperature show two dashes?</h2>
-      <p>Two dashes mean Windows does not expose that value on your PC through the counters Taskbar Monitor uses. GPU usage relies on the <em>GPU Engine</em> performance counters, which need a recent graphics driver. Temperature relies on an ACPI thermal zone. Battery also shows two dashes on a PC without a battery.</p>
+      <p>Two dashes mean Windows does not expose that value on your PC through the counters Taskbar Monitor uses. GPU usage relies on the <em>GPU Engine</em> performance counters, which need a recent graphics driver. Temperature and thermal limit rely on an ACPI thermal zone. CPU power relies on the Intel RAPL counters, which only some platforms expose. Battery and battery cycles show two dashes on a PC without a battery, and the Wi-Fi signal shows two dashes on a wired connection.</p>
 
       <h2 id="players">Which players does the now-playing widget support?</h2>
       <p>Any app that uses the Windows media controls: Spotify, YouTube and other sites in Chrome or Edge, VLC and many others. If a track shows up in the Windows volume flyout, it will show up in the widget. Cover art depends on what the app provides.</p>

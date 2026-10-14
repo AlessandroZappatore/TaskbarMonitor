@@ -1,7 +1,10 @@
 # Changelog
 
-## Unreleased
+## 1.3.0
 
+- **Six more values to choose from**: CPU power in watts (Intel RAPL), CPU frequency, CPU thermal limit, Wi-Fi signal, GPU memory in use and battery cycle count. They are only measured when selected and add no noticeable load (about 0.1% of one core for the process with all six active).
+- The Settings drop-down groups the 19 values by category (Network, CPU, GPU, Memory, Disk, Battery and system), with non-selectable headings and indented items. Clicking a heading selects its first item; the arrow keys skip headings.
+- The executable is now about 44 KB.
 - CPU temperature is now the average of the last 5 seconds instead of the instantaneous sensor sample, which on many laptops jumps by tens of degrees from one second to the next.
 
 ## 1.2.0

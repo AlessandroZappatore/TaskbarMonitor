@@ -202,3 +202,5 @@ th { color: var(--muted); font-weight: 600; font-size: 0.9rem; }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
 }
+
+table th[scope="rowgroup"] { color: var(--text); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.04em; padding-top: 1.1rem; border-bottom: 1px solid var(--line); }
