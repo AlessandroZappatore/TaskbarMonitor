@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Text;
 using System.Net.NetworkInformation;
@@ -14,20 +13,17 @@ class TaskbarMonitor : Form
     const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
     const string SettingsKey = @"Software\TaskbarMonitor";
 
-    [DllImport("user32.dll")]
-    static extern bool SetWindowPos(IntPtr h, IntPtr after, int x, int y, int cx, int cy, uint flags);
-    [DllImport("user32.dll")] static extern bool SetProcessDPIAware();
     [DllImport("user32.dll")] static extern bool SetProcessDpiAwarenessContext(IntPtr ctx);
     [DllImport("user32.dll")] static extern uint GetDpiForSystem();
+    [DllImport("kernel32.dll")] static extern bool SetDefaultDllDirectories(uint flags);
     public static float S = 1f;
     public static int P(int v) { return (int)Math.Round(v * S); }
-    static readonly IntPtr HWND_TOPMOST = new IntPtr(-1);
-    const uint SWP_NOMOVE = 2, SWP_NOSIZE = 1, SWP_NOACTIVATE = 0x10, SWP_SHOWWINDOW = 0x40;
 
     Timer timer = new Timer();
     NotifyIcon tray = new NotifyIcon();
     ToolStripMenuItem autoStartItem;
     NetworkInterface[] nics = new NetworkInterface[0];
+    string nicKey = "";
     int tick;
     long lastRx, lastTx;
     double down, up;
@@ -43,43 +39,43 @@ class TaskbarMonitor : Form
     [DllImport("user32.dll")] static extern bool UnregisterHotKey(IntPtr h, int id);
     static System.Threading.EventWaitHandle showEvent;
     static bool StartedByAutostart, OpenSettingsOnStart;
-    bool hidden;
+    bool hidden, hotkeyOk;
     ToolStripMenuItem hideItem;
 
-    // porta avvio automatico e posizione dalla vecchia versione "InternetSpeedMeter"
+    // Le versioni fino alla 1.1 registravano l'avvio automatico senza --autostart: lo aggiunge.
     static void Migrate()
     {
         try
         {
             using (var run = Registry.CurrentUser.OpenSubKey(RunKey, true))
             {
-                if (run != null && run.GetValue("InternetSpeedMeter") != null)
-                {
-                    run.DeleteValue("InternetSpeedMeter", false);
+                var cur = run == null ? null : run.GetValue(AppName) as string;
+                if (cur != null && !cur.Contains("--autostart"))
                     run.SetValue(AppName, "\"" + Application.ExecutablePath + "\" --autostart");
-                }
             }
-            using (var run2 = Registry.CurrentUser.OpenSubKey(RunKey, true))
-            {
-                // voce di avvio creata da versioni precedenti: aggiunge --autostart
-                var cur0 = run2 == null ? null : run2.GetValue(AppName) as string;
-                if (cur0 != null && !cur0.Contains("--autostart"))
-                    run2.SetValue(AppName, "\"" + Application.ExecutablePath + "\" --autostart");
-            }
-            using (var old = Registry.CurrentUser.OpenSubKey(@"Software\InternetSpeedMeter"))
-            using (var cur = Registry.CurrentUser.CreateSubKey(SettingsKey))
-            {
-                if (old != null && cur.GetValue("MX") == null)
-                    foreach (var n in old.GetValueNames()) cur.SetValue(n, old.GetValue(n));
-            }
-            Registry.CurrentUser.DeleteSubKeyTree(@"Software\InternetSpeedMeter", false);
         }
         catch { }
+    }
+
+    // Valore numerico delle impostazioni; se manca o e' danneggiato (stringa, modificato a mano) si usa il default,
+    // cosi' un valore rovinato non impedisce l'avvio dell'app.
+    static int Reg(string name, int def)
+    {
+        try
+        {
+            using (var k = Registry.CurrentUser.OpenSubKey(SettingsKey))
+            {
+                int v;
+                return k != null && int.TryParse(Convert.ToString(k.GetValue(name)), out v) ? v : def;
+            }
+        }
+        catch { return def; }
     }
 
     [STAThread]
     static void Main(string[] args)
     {
+        SetDefaultDllDirectories(0x800); // LOAD_LIBRARY_SEARCH_SYSTEM32: una wlanapi.dll accanto all'exe non viene caricata
         bool created;
         using (var m = new System.Threading.Mutex(true, AppName, out created))
         {
@@ -93,7 +89,7 @@ class TaskbarMonitor : Form
             StartedByAutostart = Array.IndexOf(args, "--autostart") >= 0;
             OpenSettingsOnStart = Array.IndexOf(args, "--settings") >= 0;
             Migrate();
-            if (!SetProcessDpiAwarenessContext(new IntPtr(-4))) SetProcessDPIAware();
+            SetProcessDpiAwarenessContext(new IntPtr(-4)); // per-monitor v2, stessa modalita' della taskbar
             try { S = GetDpiForSystem() / 96f; } catch { S = 1f; }
             Application.EnableVisualStyles();
             Application.Run(new TaskbarMonitor());
@@ -135,7 +131,9 @@ class TaskbarMonitor : Form
         UpdateTrayText();
 
         var h0 = Handle; TaskbarHost.Attach(this);
-        RegisterHotKey(Handle, HotkeyId, MOD_CONTROL | MOD_ALT | MOD_NOREPEAT, VK_M);
+        hotkeyOk = RegisterHotKey(Handle, HotkeyId, MOD_CONTROL | MOD_ALT | MOD_NOREPEAT, VK_M);
+        if (!hotkeyOk)
+            tray.ShowBalloonTip(5000, "Taskbar Monitor", "Ctrl+Alt+M is already used by another program. Click this icon to hide or show the widgets.", ToolTipIcon.Warning);
         LoadPosition();
         media = new NowPlayingBar();
         media.Enabled2 = MediaEnabled();
@@ -156,7 +154,7 @@ class TaskbarMonitor : Form
 
         timer.Interval = 1000;
         timer.Tick += (s, e) => Update1s();
-        timer.Start();
+        timer.Enabled = !hidden; // nascosto: niente misure
         if (OpenSettingsOnStart)
         {
             var once = new Timer { Interval = 800 };
@@ -185,16 +183,17 @@ class TaskbarMonitor : Form
         hideItem.Text = hidden ? "Show widgets" : "Hide widgets";
         UpdateTrayText();
         media.Suppressed = hidden;
+        timer.Enabled = !hidden;
         if (hidden)
         {
             Hide();
-            tray.ShowBalloonTip(4000, "Taskbar Monitor", "Widgets hidden. Click this icon or press Ctrl+Alt+M to show them again.", ToolTipIcon.Info);
+            tray.ShowBalloonTip(4000, "Taskbar Monitor", "Widgets hidden. Click this icon" + (hotkeyOk ? " or press Ctrl+Alt+M" : "") + " to show them again.", ToolTipIcon.Info);
         }
         else
         {
             Show();
-            TaskbarHost.Ensure(this, pos);
-            Invalidate();
+            first = true; tick = 0; // rilegge le schede di rete
+            Update1s();   // shortcut: la prima lettura di CPU e disco dopo la pausa e' una media sul tempo nascosto, si corregge dopo 1 s
         }
     }
 
@@ -203,11 +202,7 @@ class TaskbarMonitor : Form
         tray.Text = hidden ? "Taskbar Monitor (hidden) - click to show" : "Taskbar Monitor - click to hide";
     }
 
-    static bool HiddenSetting()
-    {
-        using (var k = Registry.CurrentUser.OpenSubKey(SettingsKey))
-            return k != null && Convert.ToInt32(k.GetValue("Hidden", 0)) == 1;
-    }
+    static bool HiddenSetting() { return Reg("Hidden", 0) == 1; }
 
     protected override bool ShowWithoutActivation { get { return true; } }
 
@@ -241,16 +236,14 @@ class TaskbarMonitor : Form
 
     void LoadPosition()
     {
-        using (var k = Registry.CurrentUser.OpenSubKey(SettingsKey))
+        const int none = int.MinValue;
+        int y = Reg("MY", none), mr = Reg("MR", none), mx = Reg("MX", none);
+        if (y != none && (mr != none || mx != none))
         {
-            if (k != null && k.GetValue("MY") != null && (k.GetValue("MR") != null || k.GetValue("MX") != null))
-            {
-                int y = (int)k.GetValue("MY");
-                // si salva il bordo destro: cosi' la larghezza puo' cambiare senza finire sopra l'area di notifica
-                int right = k.GetValue("MR") != null ? (int)k.GetValue("MR") : (int)k.GetValue("MX") + P(224); // MX: versioni <1.2, larghezza di allora
-                var p = new Point(right - Width, y);
-                if (SystemInformation.VirtualScreen.Contains(p)) { SetPos(p.X, p.Y); return; }
-            }
+            // si salva il bordo destro: cosi' la larghezza puo' cambiare senza finire sopra l'area di notifica
+            int right = mr != none ? mr : mx + P(224); // MX: versioni <1.2, larghezza di allora
+            var p = new Point(right - Width, y);
+            if (SystemInformation.VirtualScreen.Contains(p)) { SetPos(p.X, p.Y); return; }
         }
         PlaceDefault();
     }
@@ -265,11 +258,7 @@ class TaskbarMonitor : Form
         }
     }
 
-    static bool MediaEnabled()
-    {
-        using (var k = Registry.CurrentUser.OpenSubKey(SettingsKey))
-            return k == null || Convert.ToInt32(k.GetValue("Media", 1)) == 1;
-    }
+    static bool MediaEnabled() { return Reg("Media", 1) == 1; }
 
     static void SetMediaEnabled(bool on)
     {
@@ -301,18 +290,29 @@ class TaskbarMonitor : Form
         catch { return false; }
     }
 
+    static bool HasGateway(NetworkInterface n)
+    {
+        try { return n.GetIPProperties().GatewayAddresses.Count > 0; } catch { return false; }
+    }
+
     void Update1s()
     {
         if (tick++ % 10 == 0)
         {
+            // Solo schede con gateway: WSL, Tailscale e simili sono virtuali e il loro traffico passa gia' dalla scheda fisica,
+            // quindi contarle raddoppierebbe la velocita'.
+            // shortcut: una LAN isolata senza gateway non e' contata; una VPN a tunnel completo si'. Per cambiarlo, filtrare per nome.
             var list = new System.Collections.Generic.List<NetworkInterface>();
             foreach (var n in NetworkInterface.GetAllNetworkInterfaces())
                 if (n.OperationalStatus == OperationalStatus.Up &&
                     n.NetworkInterfaceType != NetworkInterfaceType.Loopback &&
-                    n.NetworkInterfaceType != NetworkInterfaceType.Tunnel)
+                    n.NetworkInterfaceType != NetworkInterfaceType.Tunnel &&
+                    HasGateway(n))
                     list.Add(n);
             nics = list.ToArray();
-            first = true; // evita picchi quando cambia l'insieme di interfacce
+            // azzera la base solo se cambia l'insieme delle schede, altrimenti la velocita' scenderebbe a 0 ogni 10 s
+            string key = string.Join("|", Array.ConvertAll(nics, n => n.Id));
+            if (key != nicKey) { nicKey = key; first = true; }
         }
 
         long rx = 0, tx = 0;
@@ -501,9 +501,6 @@ class TaskbarMonitor : Form
 
 class NowPlayingBar : Form
 {
-    [DllImport("user32.dll")]
-    static extern bool SetWindowPos(IntPtr h, IntPtr after, int x, int y, int cx, int cy, uint flags);
-
     Timer timer = new Timer();
     Font f1 = new Font("Segoe UI", 9f, FontStyle.Bold), f2 = new Font("Segoe UI", 8f);
     string title = "", artist = "", coverKey = "";
@@ -557,9 +554,16 @@ class NowPlayingBar : Form
         get { var cp = base.CreateParams; cp.ExStyle |= 0x80 | 0x08000000; return cp; }
     }
 
+    // Attende una chiamata di Windows al massimo 3 s: se un lettore e' bloccato la chiamata non finirebbe mai
+    // e il controllo del brano resterebbe occupato per sempre. I chiamanti gestiscono l'eccezione.
     static T Wait<T>(Windows.Foundation.IAsyncOperation<T> op)
     {
-        while (op.Status == Windows.Foundation.AsyncStatus.Started) System.Threading.Thread.Sleep(10);
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        while (op.Status == Windows.Foundation.AsyncStatus.Started)
+        {
+            if (sw.ElapsedMilliseconds > 3000) { op.Cancel(); throw new TimeoutException(); }
+            System.Threading.Thread.Sleep(10);
+        }
         return op.GetResults();
     }
 
@@ -659,6 +663,7 @@ static class TaskbarHost
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern IntPtr FindWindow(string cls, string title);
     [DllImport("user32.dll")] static extern IntPtr GetWindow(IntPtr h, uint cmd);
     [DllImport("user32.dll")] static extern bool GetWindowRect(IntPtr h, out RECT r);
+    [DllImport("user32.dll")] static extern bool IsWindowVisible(IntPtr h);
     [DllImport("user32.dll")] static extern bool SetWindowPos(IntPtr h, IntPtr after, int x, int y, int cx, int cy, uint flags);
     [DllImport("user32.dll", EntryPoint = "GetWindowLongPtr")] static extern IntPtr GetLongPtr(IntPtr h, int i);
     [DllImport("user32.dll", EntryPoint = "SetWindowLongPtr")] static extern IntPtr SetLongPtr(IntPtr h, int i, IntPtr v);
@@ -684,14 +689,8 @@ static class TaskbarHost
         SetWindowPos(f.Handle, HWND_TOPMOST, x, y, 0, 0, SWP_NOSIZE | SWP_NOACTIVATE);
     }
 
-    public static Point ScreenPos(Form f)
-    {
-        RECT r; GetWindowRect(f.Handle, out r);
-        return new Point(r.L, r.T);
-    }
-
-    // Riaggancia se Explorer e' stato riavviato; ripristina lo z-order solo se qualcosa e' davvero
-    // finito sopra la finestra (altrimenti non fa nulla, quindi nessun flicker).
+    // Riaggancia se Explorer e' stato riavviato; ripristina lo z-order solo se una finestra visibile che si sovrappone
+    // e' finita sopra (altrimenti non fa nulla: niente flicker e i due riquadri non si rialzano a vicenda ogni secondo).
     public static void Ensure(Form f, Point screenPos)
     {
         IntPtr h = f.Handle, tb = Taskbar;
@@ -701,7 +700,13 @@ static class TaskbarHost
             if (Attach(f)) MoveTo(f, screenPos.X, screenPos.Y);
             return;
         }
-        if (GetWindow(h, GW_HWNDPREV) != IntPtr.Zero)
-            SetWindowPos(h, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+        RECT me, r;
+        if (!GetWindowRect(h, out me)) return;
+        for (IntPtr w = GetWindow(h, GW_HWNDPREV); w != IntPtr.Zero; w = GetWindow(w, GW_HWNDPREV))
+            if (IsWindowVisible(w) && GetWindowRect(w, out r) && r.L < me.R && r.R > me.L && r.T < me.B && r.B > me.T)
+            {
+                SetWindowPos(h, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+                return;
+            }
     }
 }

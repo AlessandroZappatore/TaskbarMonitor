@@ -28,13 +28,6 @@ static class Metrics
     public const int SlotCount = 6; // 3 colonne x 2 righe
     const string SettingsKey = @"Software\TaskbarMonitor";
 
-    public static readonly Metric[] Choices =
-    {
-        Metric.Down, Metric.Up, Metric.Cpu, Metric.CpuTemp, Metric.Ram, Metric.RamUsed,
-        Metric.Disk, Metric.DiskRead, Metric.DiskWrite, Metric.DiskFree, Metric.Gpu, Metric.Battery, Metric.Uptime,
-        Metric.CpuPower, Metric.CpuFreq, Metric.CpuLimit, Metric.Wifi, Metric.GpuMem, Metric.BatteryCycles
-    };
-
     // Categorie mostrate nella finestra Impostazioni, nell'ordine in cui compaiono.
     public class Group
     {
@@ -102,7 +95,7 @@ static class Metrics
                         for (int i = 0; i < SlotCount; i++)
                         {
                             Metric m;
-                            if (!Enum.TryParse(parts[i].Trim(), out m)) return Default();
+                            if (!Enum.TryParse(parts[i].Trim(), out m) || !Enum.IsDefined(typeof(Metric), m)) return Default(); // "99" non e' un dato
                             if (m != Metric.None && !seen.Add(m)) return Default(); // niente doppioni
                             res[i] = m;
                         }
@@ -340,7 +333,8 @@ class Sampler : IDisposable
             gpuMemGb = ok ? sum / 1073741824.0 : double.NaN;
         }
         if (wanted.Contains(Metric.Wifi)) ReadWifi();
-        if (wanted.Contains(Metric.BatteryCycles) && tick % 60 == 0) ReadBatteryCycles();
+        // la prima query WMI dura circa 1 s: fuori dal thread dell'interfaccia
+        if (wanted.Contains(Metric.BatteryCycles) && tick % 60 == 0) System.Threading.ThreadPool.QueueUserWorkItem(_ => ReadBatteryCycles());
 
         if (wanted.Contains(Metric.DiskFree) && tick % 10 == 0)
         {
@@ -408,7 +402,8 @@ class Sampler : IDisposable
                 if (WlanOpenHandle(2, IntPtr.Zero, out negotiated, out wlanHandle) != 0) { wlanHandle = IntPtr.Zero; wifiQuality = -1; return; }
             }
             IntPtr list;
-            if (WlanEnumInterfaces(wlanHandle, IntPtr.Zero, out list) == 0)
+            if (WlanEnumInterfaces(wlanHandle, IntPtr.Zero, out list) != 0) CloseWlan(); // servizio riavviato: la maniglia non vale piu', alla prossima lettura se ne apre una nuova
+            else
             {
                 int count = Marshal.ReadInt32(list, 0);
                 for (int i = 0; i < count && quality < 0; i++)
@@ -428,7 +423,7 @@ class Sampler : IDisposable
                 WlanFreeMemory(list);
             }
         }
-        catch { quality = -1; }
+        catch { quality = -1; CloseWlan(); }
         wifiQuality = quality;
     }
 
