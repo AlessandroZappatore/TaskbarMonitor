@@ -131,7 +131,7 @@ This produces `TaskbarMonitor.exe` in the repository folder.
 
 ## How it works
 
-- **Network speed**: byte counters of all active, non-loopback network interfaces, sampled every second.
+- **Network speed**: byte counters of the active network adapters that have a default gateway, sampled every second. Virtual adapters such as WSL or Tailscale have none, so their traffic is not counted a second time on top of the physical adapter.
 - **CPU / RAM**: `GetSystemTimes` and `GlobalMemoryStatusEx` (Win32).
 - **Disk**: the *PhysicalDisk* performance counters (activity, read and write bytes per second) and free space of the system drive.
 - **GPU**: the *GPU Engine* performance counters, taking the busiest engine type like Task Manager does. Shown as `--` if Windows does not expose them.
@@ -165,6 +165,8 @@ Taskbar Monitor does not connect to the internet, collects nothing, and sends no
 - Only the primary monitor is supported.
 - The overlays sit on top of the taskbar, so they can cover taskbar items under them (for example the Widgets button on the left). Hide the now-playing overlay from the menu if that bothers you.
 - Cover art depends on what the playing app provides.
+- Network speed counts adapters with a default gateway: an isolated LAN without one is not counted, and a full-tunnel VPN (which sets its own gateway) can still be counted twice.
+- If another program already owns Ctrl+Alt+M, the hotkey does not work and the app says so at startup; clicking the tray icon still works.
 
 ## Contributing
 

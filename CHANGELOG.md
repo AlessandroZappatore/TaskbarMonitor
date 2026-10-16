@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.3.1
+
+- Fix: the download and upload speed no longer drops to 0 for one second every 10 seconds during a steady transfer.
+- Fix: network speed is no longer doubled when Tailscale, WSL or other virtual adapters carry traffic: only adapters with a default gateway are counted.
+- Fix: the Wi-Fi value recovers after the Windows WLAN service restarts instead of showing `--` until the app is restarted.
+- Fix: a stuck media player can no longer freeze the now-playing widget (calls to Windows now time out after 3 seconds).
+- Fix: a damaged value in the settings (text instead of a number, an unknown value in the list) no longer stops the app from starting.
+- If the hotkey Ctrl+Alt+M is already used by another program, the app says so at startup.
+- The widgets no longer take measurements while they are hidden, and the two widgets no longer raise each other every second.
+- The first read of the battery cycle count no longer delays the widget at startup (about 1 s), and only system DLLs are loaded.
+- New `tests/smoke.ps1` smoke test; about 40 lines of unused code removed.
+
 ## 1.3.0
 
 - **Six more values to choose from**: CPU power in watts (Intel RAPL), CPU frequency, CPU thermal limit, Wi-Fi signal, GPU memory in use and battery cycle count. They are only measured when selected and add no noticeable load (about 0.1% of one core for the process with all six active).
